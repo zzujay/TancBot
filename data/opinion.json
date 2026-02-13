@@ -1,0 +1,815 @@
+{
+  "raw_data": [],
+  "analysis_results": [
+    {
+      "taskId": "e3fbfc1d-e20d-4b41-b7fb-27d362756038",
+      "timestamp": "2026-02-12T03:26:02.952Z",
+      "iterations": 3,
+      "finalConfidence": 0,
+      "summary": {
+        "sentiment": {
+          "overall": 0,
+          "distribution": {
+            "positive": 0,
+            "negative": 0,
+            "neutral": 0
+          },
+          "confidence": 0
+        },
+        "topics": [],
+        "risks": {
+          "level": "low",
+          "score": 0,
+          "categories": {
+            "political": 0,
+            "economic": 0,
+            "social": 0,
+            "security": 0,
+            "reputation": 0
+          },
+          "highRiskCount": 0,
+          "confidence": 0
+        },
+        "overallAssessment": "基于多Agent分析结果，整体情感相对中性，用户态度较为平衡；风险水平较低，保持正常监测即可；",
+        "keyInsights": [],
+        "recommendations": [
+          "继续保持正常监测频率，关注潜在风险变化",
+          "定期分析用户反馈，改进产品和服务质量",
+          "维护良好的品牌形象，增强用户信任度",
+          "建立长期的舆情监测机制，防患于未然"
+        ]
+      },
+      "detailedResults": {
+        "sentiment": {
+          "name": "SentimentAgent",
+          "result": {
+            "overallSentiment": 0,
+            "sentimentDistribution": {
+              "positive": 0,
+              "negative": 0,
+              "neutral": 0
+            },
+            "detailedAnalysis": [],
+            "keyInsights": []
+          },
+          "confidence": 0,
+          "executionTime": 0
+        },
+        "risk": {
+          "name": "RiskAssessmentAgent",
+          "result": {
+            "overallRisk": "low",
+            "riskScore": 0,
+            "riskCategories": {
+              "political": 0,
+              "economic": 0,
+              "social": 0,
+              "security": 0,
+              "reputation": 0
+            },
+            "riskDetails": [],
+            "highRiskItems": [],
+            "recommendations": [
+              "继续保持正常监测频率，关注潜在风险变化",
+              "定期分析用户反馈，改进产品和服务质量",
+              "维护良好的品牌形象，增强用户信任度",
+              "建立长期的舆情监测机制，防患于未然"
+            ],
+            "timeline": []
+          },
+          "confidence": 0,
+          "executionTime": 1
+        },
+        "topic": {
+          "name": "TopicAgent",
+          "result": {
+            "hotTopics": [],
+            "keywords": [],
+            "topicClusters": [],
+            "trends": [],
+            "keyInsights": []
+          },
+          "confidence": 0,
+          "executionTime": 2
+        }
+      },
+      "analysisHistory": [
+        {
+          "taskId": "e3fbfc1d-e20d-4b41-b7fb-27d362756038",
+          "iteration": 1,
+          "result": {
+            "taskId": "4a119114-c9d9-4f91-a132-7e70b8bd8d32",
+            "iteration": 1,
+            "timestamp": "2026-02-12T03:26:02.929Z",
+            "dataCount": 0,
+            "agentResults": {
+              "sentiment": {
+                "name": "SentimentAgent",
+                "result": {
+                  "overallSentiment": 0,
+                  "sentimentDistribution": {
+                    "positive": 0,
+                    "negative": 0,
+                    "neutral": 0
+                  },
+                  "detailedAnalysis": [],
+                  "keyInsights": []
+                },
+                "confidence": 0,
+                "executionTime": 0
+              },
+              "risk": {
+                "name": "RiskAssessmentAgent",
+                "result": {
+                  "overallRisk": "low",
+                  "riskScore": 0,
+                  "riskCategories": {
+                    "political": 0,
+                    "economic": 0,
+                    "social": 0,
+                    "security": 0,
+                    "reputation": 0
+                  },
+                  "riskDetails": [],
+                  "highRiskItems": [],
+                  "recommendations": [
+                    "继续保持正常监测频率，关注潜在风险变化",
+                    "定期分析用户反馈，改进产品和服务质量",
+                    "维护良好的品牌形象，增强用户信任度",
+                    "建立长期的舆情监测机制，防患于未然"
+                  ],
+                  "timeline": []
+                },
+                "confidence": 0,
+                "executionTime": 1
+              },
+              "topic": {
+                "name": "TopicAgent",
+                "result": {
+                  "hotTopics": [],
+                  "keywords": [],
+                  "topicClusters": [],
+                  "trends": [],
+                  "keyInsights": []
+                },
+                "confidence": 0,
+                "executionTime": 2
+              }
+            },
+            "summary": {
+              "sentiment": {
+                "overall": 0,
+                "distribution": {
+                  "positive": 0,
+                  "negative": 0,
+                  "neutral": 0
+                },
+                "confidence": 0
+              },
+              "topics": [],
+              "risks": {
+                "level": "low",
+                "score": 0,
+                "categories": {
+                  "political": 0,
+                  "economic": 0,
+                  "social": 0,
+                  "security": 0,
+                  "reputation": 0
+                },
+                "highRiskCount": 0,
+                "confidence": 0
+              },
+              "overallAssessment": "基于多Agent分析结果，整体情感相对中性，用户态度较为平衡；风险水平较低，保持正常监测即可；",
+              "keyInsights": [],
+              "recommendations": [
+                "继续保持正常监测频率，关注潜在风险变化",
+                "定期分析用户反馈，改进产品和服务质量",
+                "维护良好的品牌形象，增强用户信任度",
+                "建立长期的舆情监测机制，防患于未然"
+              ]
+            },
+            "confidence": 0
+          },
+          "confidence": 0,
+          "timestamp": "2026-02-12T03:26:02.935Z"
+        },
+        {
+          "taskId": "e3fbfc1d-e20d-4b41-b7fb-27d362756038",
+          "iteration": 2,
+          "result": {
+            "taskId": "15cf6ae9-264f-416d-9d4c-bb9eae09452e",
+            "iteration": 2,
+            "timestamp": "2026-02-12T03:26:02.936Z",
+            "dataCount": 0,
+            "agentResults": {
+              "sentiment": {
+                "name": "SentimentAgent",
+                "result": {
+                  "overallSentiment": 0,
+                  "sentimentDistribution": {
+                    "positive": 0,
+                    "negative": 0,
+                    "neutral": 0
+                  },
+                  "detailedAnalysis": [],
+                  "keyInsights": []
+                },
+                "confidence": 0,
+                "executionTime": 0
+              },
+              "risk": {
+                "name": "RiskAssessmentAgent",
+                "result": {
+                  "overallRisk": "low",
+                  "riskScore": 0,
+                  "riskCategories": {
+                    "political": 0,
+                    "economic": 0,
+                    "social": 0,
+                    "security": 0,
+                    "reputation": 0
+                  },
+                  "riskDetails": [],
+                  "highRiskItems": [],
+                  "recommendations": [
+                    "继续保持正常监测频率，关注潜在风险变化",
+                    "定期分析用户反馈，改进产品和服务质量",
+                    "维护良好的品牌形象，增强用户信任度",
+                    "建立长期的舆情监测机制，防患于未然"
+                  ],
+                  "timeline": []
+                },
+                "confidence": 0,
+                "executionTime": 0
+              },
+              "topic": {
+                "name": "TopicAgent",
+                "result": {
+                  "hotTopics": [],
+                  "keywords": [],
+                  "topicClusters": [],
+                  "trends": [],
+                  "keyInsights": []
+                },
+                "confidence": 0,
+                "executionTime": 1
+              }
+            },
+            "summary": {
+              "sentiment": {
+                "overall": 0,
+                "distribution": {
+                  "positive": 0,
+                  "negative": 0,
+                  "neutral": 0
+                },
+                "confidence": 0
+              },
+              "topics": [],
+              "risks": {
+                "level": "low",
+                "score": 0,
+                "categories": {
+                  "political": 0,
+                  "economic": 0,
+                  "social": 0,
+                  "security": 0,
+                  "reputation": 0
+                },
+                "highRiskCount": 0,
+                "confidence": 0
+              },
+              "overallAssessment": "基于多Agent分析结果，整体情感相对中性，用户态度较为平衡；风险水平较低，保持正常监测即可；",
+              "keyInsights": [],
+              "recommendations": [
+                "继续保持正常监测频率，关注潜在风险变化",
+                "定期分析用户反馈，改进产品和服务质量",
+                "维护良好的品牌形象，增强用户信任度",
+                "建立长期的舆情监测机制，防患于未然"
+              ]
+            },
+            "confidence": 0
+          },
+          "confidence": 0,
+          "timestamp": "2026-02-12T03:26:02.940Z"
+        },
+        {
+          "taskId": "e3fbfc1d-e20d-4b41-b7fb-27d362756038",
+          "iteration": 3,
+          "result": {
+            "taskId": "fa1ac384-8860-46c8-baae-66f5ff8fb637",
+            "iteration": 3,
+            "timestamp": "2026-02-12T03:26:02.943Z",
+            "dataCount": 0,
+            "agentResults": {
+              "sentiment": {
+                "name": "SentimentAgent",
+                "result": {
+                  "overallSentiment": 0,
+                  "sentimentDistribution": {
+                    "positive": 0,
+                    "negative": 0,
+                    "neutral": 0
+                  },
+                  "detailedAnalysis": [],
+                  "keyInsights": []
+                },
+                "confidence": 0,
+                "executionTime": 0
+              },
+              "risk": {
+                "name": "RiskAssessmentAgent",
+                "result": {
+                  "overallRisk": "low",
+                  "riskScore": 0,
+                  "riskCategories": {
+                    "political": 0,
+                    "economic": 0,
+                    "social": 0,
+                    "security": 0,
+                    "reputation": 0
+                  },
+                  "riskDetails": [],
+                  "highRiskItems": [],
+                  "recommendations": [
+                    "继续保持正常监测频率，关注潜在风险变化",
+                    "定期分析用户反馈，改进产品和服务质量",
+                    "维护良好的品牌形象，增强用户信任度",
+                    "建立长期的舆情监测机制，防患于未然"
+                  ],
+                  "timeline": []
+                },
+                "confidence": 0,
+                "executionTime": 0
+              },
+              "topic": {
+                "name": "TopicAgent",
+                "result": {
+                  "hotTopics": [],
+                  "keywords": [],
+                  "topicClusters": [],
+                  "trends": [],
+                  "keyInsights": []
+                },
+                "confidence": 0,
+                "executionTime": 0
+              }
+            },
+            "summary": {
+              "sentiment": {
+                "overall": 0,
+                "distribution": {
+                  "positive": 0,
+                  "negative": 0,
+                  "neutral": 0
+                },
+                "confidence": 0
+              },
+              "topics": [],
+              "risks": {
+                "level": "low",
+                "score": 0,
+                "categories": {
+                  "political": 0,
+                  "economic": 0,
+                  "social": 0,
+                  "security": 0,
+                  "reputation": 0
+                },
+                "highRiskCount": 0,
+                "confidence": 0
+              },
+              "overallAssessment": "基于多Agent分析结果，整体情感相对中性，用户态度较为平衡；风险水平较低，保持正常监测即可；",
+              "keyInsights": [],
+              "recommendations": [
+                "继续保持正常监测频率，关注潜在风险变化",
+                "定期分析用户反馈，改进产品和服务质量",
+                "维护良好的品牌形象，增强用户信任度",
+                "建立长期的舆情监测机制，防患于未然"
+              ]
+            },
+            "confidence": 0
+          },
+          "confidence": 0,
+          "timestamp": "2026-02-12T03:26:02.947Z"
+        }
+      ],
+      "nextSteps": [
+        "分析置信度较低，建议增加数据量或调整分析参数",
+        "持续监控相关话题的发展变化",
+        "定期更新分析模型和Agent参数"
+      ],
+      "id": "mliwcjbpxg70hsfjtg",
+      "created_at": "2026-02-12T03:26:02.965Z"
+    },
+    {
+      "taskId": "10fff0db-2bee-4e6d-8c51-6fa290a7c4da",
+      "timestamp": "2026-02-12T03:26:41.042Z",
+      "iterations": 3,
+      "finalConfidence": 0,
+      "summary": {
+        "sentiment": {
+          "overall": 0,
+          "distribution": {
+            "positive": 0,
+            "negative": 0,
+            "neutral": 0
+          },
+          "confidence": 0
+        },
+        "topics": [],
+        "risks": {
+          "level": "low",
+          "score": 0,
+          "categories": {
+            "political": 0,
+            "economic": 0,
+            "social": 0,
+            "security": 0,
+            "reputation": 0
+          },
+          "highRiskCount": 0,
+          "confidence": 0
+        },
+        "overallAssessment": "基于多Agent分析结果，整体情感相对中性，用户态度较为平衡；风险水平较低，保持正常监测即可；",
+        "keyInsights": [],
+        "recommendations": [
+          "继续保持正常监测频率，关注潜在风险变化",
+          "定期分析用户反馈，改进产品和服务质量",
+          "维护良好的品牌形象，增强用户信任度",
+          "建立长期的舆情监测机制，防患于未然"
+        ]
+      },
+      "detailedResults": {
+        "sentiment": {
+          "name": "SentimentAgent",
+          "result": {
+            "overallSentiment": 0,
+            "sentimentDistribution": {
+              "positive": 0,
+              "negative": 0,
+              "neutral": 0
+            },
+            "detailedAnalysis": [],
+            "keyInsights": []
+          },
+          "confidence": 0,
+          "executionTime": 0
+        },
+        "risk": {
+          "name": "RiskAssessmentAgent",
+          "result": {
+            "overallRisk": "low",
+            "riskScore": 0,
+            "riskCategories": {
+              "political": 0,
+              "economic": 0,
+              "social": 0,
+              "security": 0,
+              "reputation": 0
+            },
+            "riskDetails": [],
+            "highRiskItems": [],
+            "recommendations": [
+              "继续保持正常监测频率，关注潜在风险变化",
+              "定期分析用户反馈，改进产品和服务质量",
+              "维护良好的品牌形象，增强用户信任度",
+              "建立长期的舆情监测机制，防患于未然"
+            ],
+            "timeline": []
+          },
+          "confidence": 0,
+          "executionTime": 1
+        },
+        "topic": {
+          "name": "TopicAgent",
+          "result": {
+            "hotTopics": [],
+            "keywords": [],
+            "topicClusters": [],
+            "trends": [],
+            "keyInsights": []
+          },
+          "confidence": 0,
+          "executionTime": 1
+        }
+      },
+      "analysisHistory": [
+        {
+          "taskId": "10fff0db-2bee-4e6d-8c51-6fa290a7c4da",
+          "iteration": 1,
+          "result": {
+            "taskId": "77f8ef38-049c-4319-9a83-bd86fcc4d2de",
+            "iteration": 1,
+            "timestamp": "2026-02-12T03:26:41.011Z",
+            "dataCount": 0,
+            "agentResults": {
+              "sentiment": {
+                "name": "SentimentAgent",
+                "result": {
+                  "overallSentiment": 0,
+                  "sentimentDistribution": {
+                    "positive": 0,
+                    "negative": 0,
+                    "neutral": 0
+                  },
+                  "detailedAnalysis": [],
+                  "keyInsights": []
+                },
+                "confidence": 0,
+                "executionTime": 0
+              },
+              "risk": {
+                "name": "RiskAssessmentAgent",
+                "result": {
+                  "overallRisk": "low",
+                  "riskScore": 0,
+                  "riskCategories": {
+                    "political": 0,
+                    "economic": 0,
+                    "social": 0,
+                    "security": 0,
+                    "reputation": 0
+                  },
+                  "riskDetails": [],
+                  "highRiskItems": [],
+                  "recommendations": [
+                    "继续保持正常监测频率，关注潜在风险变化",
+                    "定期分析用户反馈，改进产品和服务质量",
+                    "维护良好的品牌形象，增强用户信任度",
+                    "建立长期的舆情监测机制，防患于未然"
+                  ],
+                  "timeline": []
+                },
+                "confidence": 0,
+                "executionTime": 1
+              },
+              "topic": {
+                "name": "TopicAgent",
+                "result": {
+                  "hotTopics": [],
+                  "keywords": [],
+                  "topicClusters": [],
+                  "trends": [],
+                  "keyInsights": []
+                },
+                "confidence": 0,
+                "executionTime": 2
+              }
+            },
+            "summary": {
+              "sentiment": {
+                "overall": 0,
+                "distribution": {
+                  "positive": 0,
+                  "negative": 0,
+                  "neutral": 0
+                },
+                "confidence": 0
+              },
+              "topics": [],
+              "risks": {
+                "level": "low",
+                "score": 0,
+                "categories": {
+                  "political": 0,
+                  "economic": 0,
+                  "social": 0,
+                  "security": 0,
+                  "reputation": 0
+                },
+                "highRiskCount": 0,
+                "confidence": 0
+              },
+              "overallAssessment": "基于多Agent分析结果，整体情感相对中性，用户态度较为平衡；风险水平较低，保持正常监测即可；",
+              "keyInsights": [],
+              "recommendations": [
+                "继续保持正常监测频率，关注潜在风险变化",
+                "定期分析用户反馈，改进产品和服务质量",
+                "维护良好的品牌形象，增强用户信任度",
+                "建立长期的舆情监测机制，防患于未然"
+              ]
+            },
+            "confidence": 0
+          },
+          "confidence": 0,
+          "timestamp": "2026-02-12T03:26:41.026Z"
+        },
+        {
+          "taskId": "10fff0db-2bee-4e6d-8c51-6fa290a7c4da",
+          "iteration": 2,
+          "result": {
+            "taskId": "b9dc55d9-8df6-4248-8177-26f982b7120d",
+            "iteration": 2,
+            "timestamp": "2026-02-12T03:26:41.027Z",
+            "dataCount": 0,
+            "agentResults": {
+              "sentiment": {
+                "name": "SentimentAgent",
+                "result": {
+                  "overallSentiment": 0,
+                  "sentimentDistribution": {
+                    "positive": 0,
+                    "negative": 0,
+                    "neutral": 0
+                  },
+                  "detailedAnalysis": [],
+                  "keyInsights": []
+                },
+                "confidence": 0,
+                "executionTime": 0
+              },
+              "risk": {
+                "name": "RiskAssessmentAgent",
+                "result": {
+                  "overallRisk": "low",
+                  "riskScore": 0,
+                  "riskCategories": {
+                    "political": 0,
+                    "economic": 0,
+                    "social": 0,
+                    "security": 0,
+                    "reputation": 0
+                  },
+                  "riskDetails": [],
+                  "highRiskItems": [],
+                  "recommendations": [
+                    "继续保持正常监测频率，关注潜在风险变化",
+                    "定期分析用户反馈，改进产品和服务质量",
+                    "维护良好的品牌形象，增强用户信任度",
+                    "建立长期的舆情监测机制，防患于未然"
+                  ],
+                  "timeline": []
+                },
+                "confidence": 0,
+                "executionTime": 0
+              },
+              "topic": {
+                "name": "TopicAgent",
+                "result": {
+                  "hotTopics": [],
+                  "keywords": [],
+                  "topicClusters": [],
+                  "trends": [],
+                  "keyInsights": []
+                },
+                "confidence": 0,
+                "executionTime": 1
+              }
+            },
+            "summary": {
+              "sentiment": {
+                "overall": 0,
+                "distribution": {
+                  "positive": 0,
+                  "negative": 0,
+                  "neutral": 0
+                },
+                "confidence": 0
+              },
+              "topics": [],
+              "risks": {
+                "level": "low",
+                "score": 0,
+                "categories": {
+                  "political": 0,
+                  "economic": 0,
+                  "social": 0,
+                  "security": 0,
+                  "reputation": 0
+                },
+                "highRiskCount": 0,
+                "confidence": 0
+              },
+              "overallAssessment": "基于多Agent分析结果，整体情感相对中性，用户态度较为平衡；风险水平较低，保持正常监测即可；",
+              "keyInsights": [],
+              "recommendations": [
+                "继续保持正常监测频率，关注潜在风险变化",
+                "定期分析用户反馈，改进产品和服务质量",
+                "维护良好的品牌形象，增强用户信任度",
+                "建立长期的舆情监测机制，防患于未然"
+              ]
+            },
+            "confidence": 0
+          },
+          "confidence": 0,
+          "timestamp": "2026-02-12T03:26:41.031Z"
+        },
+        {
+          "taskId": "10fff0db-2bee-4e6d-8c51-6fa290a7c4da",
+          "iteration": 3,
+          "result": {
+            "taskId": "9d1c8656-a2f1-49ec-991b-c4b90d6e18d8",
+            "iteration": 3,
+            "timestamp": "2026-02-12T03:26:41.035Z",
+            "dataCount": 0,
+            "agentResults": {
+              "sentiment": {
+                "name": "SentimentAgent",
+                "result": {
+                  "overallSentiment": 0,
+                  "sentimentDistribution": {
+                    "positive": 0,
+                    "negative": 0,
+                    "neutral": 0
+                  },
+                  "detailedAnalysis": [],
+                  "keyInsights": []
+                },
+                "confidence": 0,
+                "executionTime": 1
+              },
+              "risk": {
+                "name": "RiskAssessmentAgent",
+                "result": {
+                  "overallRisk": "low",
+                  "riskScore": 0,
+                  "riskCategories": {
+                    "political": 0,
+                    "economic": 0,
+                    "social": 0,
+                    "security": 0,
+                    "reputation": 0
+                  },
+                  "riskDetails": [],
+                  "highRiskItems": [],
+                  "recommendations": [
+                    "继续保持正常监测频率，关注潜在风险变化",
+                    "定期分析用户反馈，改进产品和服务质量",
+                    "维护良好的品牌形象，增强用户信任度",
+                    "建立长期的舆情监测机制，防患于未然"
+                  ],
+                  "timeline": []
+                },
+                "confidence": 0,
+                "executionTime": 1
+              },
+              "topic": {
+                "name": "TopicAgent",
+                "result": {
+                  "hotTopics": [],
+                  "keywords": [],
+                  "topicClusters": [],
+                  "trends": [],
+                  "keyInsights": []
+                },
+                "confidence": 0,
+                "executionTime": 2
+              }
+            },
+            "summary": {
+              "sentiment": {
+                "overall": 0,
+                "distribution": {
+                  "positive": 0,
+                  "negative": 0,
+                  "neutral": 0
+                },
+                "confidence": 0
+              },
+              "topics": [],
+              "risks": {
+                "level": "low",
+                "score": 0,
+                "categories": {
+                  "political": 0,
+                  "economic": 0,
+                  "social": 0,
+                  "security": 0,
+                  "reputation": 0
+                },
+                "highRiskCount": 0,
+                "confidence": 0
+              },
+              "overallAssessment": "基于多Agent分析结果，整体情感相对中性，用户态度较为平衡；风险水平较低，保持正常监测即可；",
+              "keyInsights": [],
+              "recommendations": [
+                "继续保持正常监测频率，关注潜在风险变化",
+                "定期分析用户反馈，改进产品和服务质量",
+                "维护良好的品牌形象，增强用户信任度",
+                "建立长期的舆情监测机制，防患于未然"
+              ]
+            },
+            "confidence": 0
+          },
+          "confidence": 0,
+          "timestamp": "2026-02-12T03:26:41.039Z"
+        }
+      ],
+      "nextSteps": [
+        "分析置信度较低，建议增加数据量或调整分析参数",
+        "持续监控相关话题的发展变化",
+        "定期更新分析模型和Agent参数"
+      ],
+      "id": "mliwdcpq5zuqvrnu1vf",
+      "created_at": "2026-02-12T03:26:41.054Z"
+    }
+  ],
+  "tasks": [],
+  "metadata": {
+    "version": "1.0.0",
+    "created_at": "2026-02-12T02:39:47.547Z",
+    "last_updated": "2026-02-12T03:26:41.054Z"
+  }
+}

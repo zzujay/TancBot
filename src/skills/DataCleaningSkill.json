@@ -1,0 +1,12 @@
+{
+  "name": "DataCleaningSkill",
+  "version": "1.0.0",
+  "description": "智能数据清洗和预处理技能",
+  "config": {
+    "minTextLength": 10,
+    "maxTextLength": 1000,
+    "removeDuplicates": true,
+    "languageFilter": "zh",
+    "qualityThreshold": 0.7
+  }
+}

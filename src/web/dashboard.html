@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>舆情研判系统V2 - 实时监控</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.5.0/dist/socket.io.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --info-color: #16a085;
+        }
+
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .metric-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--secondary-color);
+        }
+
+        .metric-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+
+        .status-online { background-color: var(--success-color); }
+        .status-warning { background-color: var(--warning-color); }
+        .status-offline { background-color: var(--danger-color); }
+
+        .sidebar {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            height: calc(100vh - 120px);
+            overflow-y: auto;
+        }
+
+        .main-content {
+            padding-left: 20px;
+        }
+
+        .alert-item {
+            border-left: 4px solid var(--danger-color);
+            background: #fff5f5;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+
+        .trend-up { color: var(--success-color); }
+        .trend-down { color: var(--danger-color); }
+        .trend-stable { color: #6c757d; }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--secondary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .word-cloud {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 20px;
+            justify-content: center;
+        }
+
+        .word {
+            padding: 5px 10px;
+            border-radius: 20px;
+            background: var(--secondary-color);
+            color: white;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .word:hover {
+            transform: scale(1.1);
+            background: var(--primary-color);
+        }
+
+        .risk-gauge {
+            width: 200px;
+            height: 200px;
+            margin: 0 auto;
+        }
+
+        .progress-custom {
+            height: 8px;
+            border-radius: 4px;
+        }
+
+        .card-header-custom {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-radius: 10px 10px 0 0 !important;
+            border: none;
+            padding: 15px 20px;
+        }
+
+        .btn-custom {
+            background: linear-gradient(135deg, var(--secondary-color), var(--info-color));
+            border: none;
+            color: white;
+            border-radius: 25px;
+            padding: 10px 25px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                padding-left: 0;
+            }
+            
+            .sidebar {
+                height: auto;
+                margin-bottom: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-dark">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">
+                <i class="fa fa-chart-line"></i> 舆情研判系统V2
+            </span>
+            <div class="d-flex align-items-center text-white">
+                <span class="me-3">
+                    <span class="status-indicator status-online"></span>
+                    <span id="connection-status">连接中...</span>
+                </span>
+                <span class="me-3">
+                    <i class="fa fa-clock"></i>
+                    <span id="current-time"></span>
+                </span>
+                <span>
+                    <i class="fa fa-user"></i>
+                    管理员
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-3">
+        <div class="row">
+            <!-- 侧边栏 -->
+            <div class="col-md-3">
+                <div class="sidebar">
+                    <!-- 快速操作 -->
+                    <div class="mb-4">
+                        <h5 class="text-primary mb-3">
+                            <i class="fa fa-bolt"></i> 快速操作
+                        </h5>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-custom" onclick="startNewAnalysis()">
+                                <i class="fa fa-play"></i> 开始分析
+                            </button>
+                            <button class="btn btn-outline-primary" onclick="exportData()">
+                                <i class="fa fa-download"></i> 导出数据
+                            </button>
+                            <button class="btn btn-outline-secondary" onclick="refreshDashboard()">
+                                <i class="fa fa-refresh"></i> 刷新数据
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 实时监控设置 -->
+                    <div class="mb-4">
+                        <h5 class="text-primary mb-3">
+                            <i class="fa fa-cog"></i> 监控设置
+                        </h5>
+                        <div class="mb-3">
+                            <label class="form-label">关键词</label>
+                            <input type="text" class="form-control" id="keywords-input" 
+                                   placeholder="输入关键词，用逗号分隔" value="华为,小米,苹果">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">监控平台</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="platform-weibo" checked>
+                                <label class="form-check-label" for="platform-weibo">微博</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="platform-douyin">
+                                <label class="form-check-label" for="platform-douyin">抖音</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="platform-zhihu">
+                                <label class="form-check-label" for="platform-zhihu">知乎</label>
+                            </div>
+                        </div>
+                        <button class="btn btn-sm btn-primary" onclick="updateMonitoring()">
+                            <i class="fa fa-check"></i> 应用设置
+                        </button>
+                    </div>
+
+                    <!-- 最近告警 -->
+                    <div class="mb-4">
+                        <h5 class="text-primary mb-3">
+                            <i class="fa fa-exclamation-triangle"></i> 最近告警
+                        </h5>
+                        <div id="recent-alerts">
+                            <div class="alert-item">
+                                <strong>高风险预警</strong>
+                                <div class="small text-muted">检测到大量负面情感</div>
+                                <div class="small">2分钟前</div>
+                            </div>
+                            <div class="alert-item">
+                                <strong>系统告警</strong>
+                                <div class="small text-muted">API响应时间过长</div>
+                                <div class="small">5分钟前</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 系统状态 -->
+                    <div>
+                        <h5 class="text-primary mb-3">
+                            <i class="fa fa-server"></i> 系统状态
+                        </h5>
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between">
+                                <span>CPU使用率</span>
+                                <span id="cpu-usage">45%</span>
+                            </div>
+                            <div class="progress progress-custom">
+                                <div class="progress-bar" id="cpu-progress" style="width: 45%"></div>
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between">
+                                <span>内存使用</span>
+                                <span id="memory-usage">62%</span>
+                            </div>
+                            <div class="progress progress-custom">
+                                <div class="progress-bar bg-info" id="memory-progress" style="width: 62%"></div>
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between">
+                                <span>磁盘使用</span>
+                                <span id="disk-usage">78%</span>
+                            </div>
+                            <div class="progress progress-custom">
+                                <div class="progress-bar bg-warning" id="disk-progress" style="width: 78%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 主内容区 -->
+            <div class="col-md-9 main-content">
+                <!-- 关键指标卡片 -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="metric-card text-center">
+                            <div class="metric-label">舆情指数</div>
+                            <div class="metric-value" id="sentiment-index">7.2</div>
+                            <div class="small">
+                                <span class="trend-up">
+                                    <i class="fa fa-arrow-up"></i> +12%
+                                </span>
+                                vs 昨日
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="metric-card text-center">
+                            <div class="metric-label">风险等级</div>
+                            <div class="metric-value text-warning" id="risk-level">中等</div>
+                            <div class="small">
+                                <span class="trend-stable">
+                                    <i class="fa fa-minus"></i> 持平
+                                </span>
+                                vs 昨日
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="metric-card text-center">
+                            <div class="metric-label">数据量</div>
+                            <div class="metric-value" id="data-volume">2.4K</div>
+                            <div class="small">
+                                <span class="trend-up">
+                                    <i class="fa fa-arrow-up"></i> +8%
+                                </span>
+                                vs 昨日
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="metric-card text-center">
+                            <div class="metric-label">置信度</div>
+                            <div class="metric-value" id="confidence">87%</div>
+                            <div class="small">
+                                <span class="trend-up">
+                                    <i class="fa fa-arrow-up"></i> +3%
+                                </span>
+                                vs 昨日
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 图表区域 -->
+                <div class="row">
+                    <!-- 情感趋势图 -->
+                    <div class="col-md-8">
+                        <div class="chart-container">
+                            <h5 class="mb-3">
+                                <i class="fa fa-line-chart"></i> 情感趋势分析
+                            </h5>
+                            <canvas id="sentiment-trend-chart" height="100"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- 风险仪表盘 -->
+                    <div class="col-md-4">
+                        <div class="chart-container text-center">
+                            <h5 class="mb-3">
+                                <i class="fa fa-tachometer"></i> 风险指数
+                            </h5>
+                            <canvas id="risk-gauge" class="risk-gauge"></canvas>
+                            <div class="mt-3">
+                                <div class="row text-center">
+                                    <div class="col-4">
+                                        <div class="text-success">
+                                            <i class="fa fa-shield"></i><br>
+                                            <small>低风险</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="text-warning">
+                                            <i class="fa fa-exclamation-triangle"></i><br>
+                                            <small>中风险</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="text-danger">
+                                            <i class="fa fa-warning"></i><br>
+                                            <small>高风险</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- 热门话题 -->
+                    <div class="col-md-6">
+                        <div class="chart-container">
+                            <h5 class="mb-3">
+                                <i class="fa fa-fire"></i> 热门话题
+                            </h5>
+                            <div id="hot-topics" class="word-cloud">
+                                <!-- 动态生成词云 -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 情感分布饼图 -->
+                    <div class="col-md-6">
+                        <div class="chart-container">
+                            <h5 class="mb-3">
+                                <i class="fa fa-pie-chart"></i> 情感分布
+                            </h5>
+                            <canvas id="sentiment-pie-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 详细数据表格 -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="chart-container">
+                            <h5 class="mb-3">
+                                <i class="fa fa-table"></i> 实时数据流
+                            </h5>
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>时间</th>
+                                            <th>平台</th>
+                                            <th>内容</th>
+                                            <th>情感</th>
+                                            <th>风险</th>
+                                            <th>互动</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="realtime-data-table">
+                                        <!-- 动态生成数据 -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 分析模态框 -->
+    <div class="modal fade" id="analysisModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header card-header-custom">
+                    <h5 class="modal-title">
+                        <i class="fa fa-search"></i> 舆情分析
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="analysis-progress">
+                        <div class="text-center mb-3">
+                            <div class="loading-spinner"></div>
+                            <p class="mt-2">正在分析数据...</p>
+                        </div>
+                        <div class="progress mb-3">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 id="analysis-progress-bar" style="width: 0%"></div>
+                        </div>
+                        <div id="analysis-status"></div>
+                    </div>
+                    <div id="analysis-results" style="display: none;">
+                        <!-- 分析结果将在这里显示 -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                    <button type="button" class="btn btn-custom" onclick="exportAnalysisResults()">
+                        <i class="fa fa-download"></i> 导出结果
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 全局变量
+        let socket;
+        let charts = {};
+        let currentData = {};
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeSocket();
+            initializeCharts();
+            updateTime();
+            setInterval(updateTime, 1000);
+            
+            // 模拟实时数据更新
+            setInterval(updateMockData, 5000);
+        });
+
+        // Socket.io连接
+        function initializeSocket() {
+            socket = io();
+            
+            socket.on('connect', function() {
+                document.getElementById('connection-status').innerHTML = 
+                    '<span class="status-indicator status-online"></span>已连接';
+                
+                // 订阅实时数据
+                socket.emit('subscribe_realtime', {
+                    keywords: ['华为', '小米', '苹果'],
+                    platforms: ['weibo']
+                });
+            });
+
+            socket.on('disconnect', function() {
+                document.getElementById('connection-status').innerHTML = 
+                    '<span class="status-indicator status-offline"></span>断开连接';
+            });
+
+            socket.on('realtime_data', function(data) {
+                updateRealtimeData(data);
+            });
+
+            socket.on('system_status', function(status) {
+                updateSystemStatus(status);
+            });
+
+            socket.on('performance_metrics', function(metrics) {
+                updatePerformanceMetrics(metrics);
+            });
+        }
+
+        // 初始化图表
+        function initializeCharts() {
+            // 情感趋势图
+            const sentimentCtx = document.getElementById('sentiment-trend-chart').getContext('2d');
+            charts.sentimentTrend = new Chart(sentimentCtx, {
+                type: 'line',
+                data: {
+                    labels: generateTimeLabels(24),
+                    datasets: [{
+                        label: '积极情感',
+                        data: generateRandomData(24, 0.3, 0.8),
+                        borderColor: '#27ae60',
+                        backgroundColor: 'rgba(39, 174, 96, 0.1)',
+                        tension: 0.4
+                    }, {
+                        label: '消极情感',
+                        data: generateRandomData(24, 0.1, 0.5),
+                        borderColor: '#e74c3c',
+                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                        tension: 0.4
+                    }, {
+                        label: '中性情感',
+                        data: generateRandomData(24, 0.2, 0.6),
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 1
+                        }
+                    }
+                }
+            });
+
+            // 风险仪表盘
+            const riskCtx = document.getElementById('risk-gauge').getContext('2d');
+            charts.riskGauge = new Chart(riskCtx, {
+                type: 'doughnut',
+                data: {
+                    datasets: [{
+                        data: [65, 35],
+                        backgroundColor: ['#f39c12', '#ecf0f1'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    circumference: 180,
+                    rotation: 270,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            enabled: false
+                        }
+                    }
+                }
+            });
+
+            // 情感分布饼图
+            const pieCtx = document.getElementById('sentiment-pie-chart').getContext('2d');
+            charts.sentimentPie = new Chart(pieCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['积极', '消极', '中性'],
+                    datasets: [{
+                        data: [45, 25, 30],
+                        backgroundColor: ['#27ae60', '#e74c3c', '#3498db'],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        // 生成时间标签
+        function generateTimeLabels(hours) {
+            const labels = [];
+            const now = new Date();
+            for (let i = hours - 1; i >= 0; i--) {
+                const time = new Date(now - i * 60 * 60 * 1000);
+                labels.push(time.getHours() + ':00');
+            }
+            return labels;
+        }
+
+        // 生成随机数据
+        function generateRandomData(count, min, max) {
+            const data = [];
+            for (let i = 0; i < count; i++) {
+                data.push(Math.random() * (max - min) + min);
+            }
+            return data;
+        }
+
+        // 更新时间
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('current-time').textContent = 
+                now.toLocaleString('zh-CN', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+        }
+
+        // 更新模拟数据
+        function updateMockData() {
+            // 更新关键指标
+            document.getElementById('sentiment-index').textContent = (Math.random() * 2 + 6).toFixed(1);
+            document.getElementById('risk-level').textContent = ['低', '中', '高'][Math.floor(Math.random() * 3)];
+            document.getElementById('data-volume').textContent = (Math.random() * 2 + 1).toFixed(1) + 'K';
+            document.getElementById('confidence').textContent = (Math.random() * 10 + 80).toFixed(0) + '%';
+
+            // 更新词云
+            updateWordCloud();
+            
+            // 更新数据表格
+            updateDataTable();
+        }
+
+        // 更新词云
+        function updateWordCloud() {
+            const topics = [
+                '产品质量', '用户体验', '性价比', '售后服务', '外观设计',
+                '功能齐全', '操作简单', '品牌信任', '技术创新', '市场反响'
+            ];
+            
+            const container = document.getElementById('hot-topics');
+            container.innerHTML = '';
+            
+            topics.forEach(topic => {
+                const word = document.createElement('span');
+                word.className = 'word';
+                word.textContent = topic;
+                word.style.fontSize = (Math.random() * 10 + 12) + 'px';
+                word.style.opacity = Math.random() * 0.3 + 0.7;
+                container.appendChild(word);
+            });
+        }
+
+        // 更新数据表格
+        function updateDataTable() {
+            const platforms = ['微博', '抖音', '知乎'];
+            const sentiments = ['积极', '中性', '消极'];
+            const risks = ['低', '中', '高'];
+            
+            const tbody = document.getElementById('realtime-data-table');
+            const rows = [];
+            
+            for (let i = 0; i < 5; i++) {
+                const row = document.createElement('tr');
+                const time = new Date(Date.now() - i * 60000).toLocaleTimeString('zh-CN');
+                const platform = platforms[Math.floor(Math.random() * platforms.length)];
+                const content = '这是一个关于产品的用户评论内容...';
+                const sentiment = sentiments[Math.floor(Math.random() * sentiments.length)];
+                const risk = risks[Math.floor(Math.random() * risks.length)];
+                const interactions = Math.floor(Math.random() * 1000);
+                
+                row.innerHTML = `
+                    <td>${time}</td>
+                    <td>${platform}</td>
+                    <td>${content}</td>
+                    <td><span class="badge bg-${sentiment === '积极' ? 'success' : sentiment === '中性' ? 'primary' : 'danger'}">${sentiment}</span></td>
+                    <td><span class="badge bg-${risk === '低' ? 'success' : risk === '中' ? 'warning' : 'danger'}">${risk}</span></td>
+                    <td>${interactions}</td>
+                `;
+                rows.push(row);
+            }
+            
+            tbody.innerHTML = '';
+            rows.forEach(row => tbody.appendChild(row));
+        }
+
+        // 开始新分析
+        function startNewAnalysis() {
+            const modal = new bootstrap.Modal(document.getElementById('analysisModal'));
+            modal.show();
+            
+            // 模拟分析进度
+            simulateAnalysisProgress();
+        }
+
+        // 模拟分析进度
+        function simulateAnalysisProgress() {
+            const progressBar = document.getElementById('analysis-progress-bar');
+            const statusDiv = document.getElementById('analysis-status');
+            let progress = 0;
+            
+            const steps = [
+                { progress: 20, message: '正在采集数据...' },
+                { progress: 40, message: '正在清洗数据...' },
+                { progress: 60, message: '正在进行AI分析...' },
+                { progress: 80, message: '正在生成报告...' },
+                { progress: 100, message: '分析完成！' }
+            ];
+            
+            let currentStep = 0;
+            
+            const interval = setInterval(() => {
+                if (currentStep < steps.length) {
+                    progress = steps[currentStep].progress;
+                    progressBar.style.width = progress + '%';
+                    statusDiv.innerHTML = `<p>${steps[currentStep].message}</p>`;
+                    currentStep++;
+                } else {
+                    clearInterval(interval);
+                    
+                    // 显示结果
+                    setTimeout(() => {
+                        document.getElementById('analysis-progress').style.display = 'none';
+                        document.getElementById('analysis-results').style.display = 'block';
+                        document.getElementById('analysis-results').innerHTML = `
+                            <div class="alert alert-success">
+                                <h5><i class="fa fa-check-circle"></i> 分析完成</h5>
+                                <p>成功分析 ${Math.floor(Math.random() * 1000 + 500)} 条数据</p>
+                                <p>整体情感指数: ${(Math.random() * 2 + 6).toFixed(1)}</p>
+                                <p>风险等级: ${['低', '中', '高'][Math.floor(Math.random() * 3)]}</p>
+                            </div>
+                        `;
+                    }, 1000);
+                }
+            }, 1000);
+        }
+
+        // 导出数据
+        function exportData() {
+            alert('数据导出功能开发中...');
+        }
+
+        // 刷新仪表板
+        function refreshDashboard() {
+            // 重新初始化图表
+            Object.values(charts).forEach(chart => {
+                chart.destroy();
+            });
+            initializeCharts();
+            
+            // 更新数据
+            updateMockData();
+            
+            // 显示提示
+            const toast = document.createElement('div');
+            toast.className = 'position-fixed top-0 end-0 p-3';
+            toast.style.zIndex = '1050';
+            toast.innerHTML = `
+                <div class="toast show" role="alert">
+                    <div class="toast-header">
+                        <strong class="me-auto">系统提示</strong>
+                        <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+                    </div>
+                    <div class="toast-body">
+                        数据已刷新！
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                document.body.removeChild(toast);
+            }, 3000);
+        }
+
+        // 更新监控设置
+        function updateMonitoring() {
+            const keywords = document.getElementById('keywords-input').value;
+            const platforms = [];
+            
+            if (document.getElementById('platform-weibo').checked) platforms.push('weibo');
+            if (document.getElementById('platform-douyin').checked) platforms.push('douyin');
+            if (document.getElementById('platform-zhihu').checked) platforms.push('zhihu');
+            
+            // 发送更新到服务器
+            if (socket && socket.connected) {
+                socket.emit('update_monitoring', {
+                    keywords: keywords.split(',').map(k => k.trim()),
+                    platforms: platforms
+                });
+            }
+            
+            alert('监控设置已更新！');
+        }
+
+        // 导出分析结果
+        function exportAnalysisResults() {
+            alert('分析结果导出功能开发中...');
+        }
+
+        // 更新实时数据
+        function updateRealtimeData(data) {
+            // 这里处理从服务器接收的实时数据
+            console.log('收到实时数据:', data);
+        }
+
+        // 更新系统状态
+        function updateSystemStatus(status) {
+            // 更新系统状态显示
+            console.log('系统状态更新:', status);
+        }
+
+        // 更新性能指标
+        function updatePerformanceMetrics(metrics) {
+            // 更新性能指标显示
+            console.log('性能指标更新:', metrics);
+        }
+    </script>
+</body>
+</html>
