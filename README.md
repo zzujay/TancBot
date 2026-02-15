@@ -1,276 +1,170 @@
-# 舆情研判系统V1 CLI版本
+# TancBot 舆情研判系统 V1
 
-一个基于Node.js的智能舆情分析系统，支持多Agent协作、多轮验证和自动进化功能。
+基于AI的微博舆情分析与研判系统，支持多Agent智能分析。
 
 ## 功能特性
 
-### 🎯 核心功能
-- **数据采集**: 自动抓取微博相关数据
-- **AI分析引擎**: 多Agent智能分析（情感分析、主题提取、风险评估）
-- **多轮验证**: 多轮分析验证，提高结果准确性
-- **自动进化**: 基于反馈自动优化分析策略
-- **CLI界面**: 友好的命令行交互界面
-
-### 🤖 Agent系统
-- **情感分析Agent**: 分析文本情感倾向
-- **主题提取Agent**: 识别热门话题和关键词
-- **风险评估Agent**: 评估潜在舆情风险
-
-### ⚡ Skill系统
-- **数据清洗技能**: 智能数据预处理
-- **自动进化**: 基于性能反馈自动优化
-- **自适应学习**: 根据分析结果调整策略
+- 📱 **微博数据采集** - 支持二维码登录，自动采集微博数据
+- 📊 **时间线整理** - 按时间顺序整理舆情数据
+- 🤖 **LLM多Agent分析** - 情感分析、主题建模、风险评估
+- 📝 **研判报告生成** - 自动生成结构化研判报告
+- 💻 **交互式CLI** - 支持连续分析多个话题
 
 ## 快速开始
 
-### 1. 安装依赖
+### 安装
+
 ```bash
-cd public-opinion-system
+# 克隆仓库
+git clone https://github.com/your-username/tancbot.git
+cd tancbot
+
+# 安装依赖
 npm install
+
+# 安装全局命令
+npm link
 ```
 
-### 2. 配置环境
-复制环境配置文件：
+### 配置
+
+创建 `.env` 文件并配置API密钥：
+
+```env
+# 通义千问API配置（推荐）
+QWEN_API_KEY=your_qwen_api_key_here
+QWEN_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+QWEN_MODEL=qwen-turbo
+```
+
+#### 获取通义千问API密钥
+
+1. 访问 [阿里云百炼平台](https://bailian.console.aliyun.com/)
+2. 注册/登录阿里云账号
+3. 开通"模型服务灵积"
+4. 创建API Key
+
+### 使用
+
 ```bash
-cp .env.example .env
+# 启动系统
+tancbot
 ```
 
-编辑 `.env` 文件，配置必要的参数：
-```bash
-# 微博Cookie（用于数据采集）
-WEIBO_COOKIE=your_weibo_cookie_here
+## 命令说明
 
-# OpenAI API Key（用于AI分析）
-OPENAI_API_KEY=your_openai_api_key_here
-```
+| 命令 | 说明 |
+|------|------|
+| `<话题>` | 直接输入话题进行分析 |
+| `analyze <话题>` | 分析指定话题的舆情 |
+| `status` | 查看系统状态 |
+| `help` | 显示帮助信息 |
+| `exit` / `quit` | 退出程序 |
 
-### 3. 初始化系统
-```bash
-npm run cli init
-```
-
-### 4. 开始分析
-```bash
-# 交互模式
-npm run cli analyze -- --interactive
-
-# 命令行模式
-npm run cli analyze -- -k "华为,小米,苹果" -p "weibo" -m 50 -t "24h"
-```
-
-## 使用说明
-
-### CLI命令
-
-#### 分析命令
-```bash
-# 基础分析
-pos analyze -k "关键词1,关键词2"
-
-# 高级选项
-pos analyze -k "华为" -p "weibo" -m 100 -t "24h" --interactive
-```
-
-参数说明：
-- `-k, --keywords`: 关键词列表，逗号分隔
-- `-p, --platforms`: 平台列表（默认：weibo）
-- `-m, --max-results`: 最大结果数（默认：100）
-- `-t, --time-range`: 时间范围（1h, 6h, 24h, 7d）
-- `-i, --interactive`: 交互模式
-
-#### 系统管理
-```bash
-# 查看系统状态
-pos status
-
-# 查看配置
-pos config --show
-
-# 查看历史记录
-pos history --limit 10
-```
-
-### 系统架构
+## 使用示例
 
 ```
-public-opinion-system/
+🤖 欢迎使用 TancBot 舆情研判系统
+输入 "help" 查看帮助，输入 "exit" 退出
+
+🚀 TancBot 舆情研判系统 V1
+==================================================
+✔ 系统初始化完成！
+
+tancbot> 年轻人不结婚
+📱 检测到未登录，开始微博登录流程...
+💡 请使用手机微博扫描上方二维码
+✅ 微博登录成功！
+收集到 10 条数据
+AI分析完成
+
+📋 舆情事件研判报告
+============================================================
+📝 分析话题: 年轻人不结婚
+📅 分析时间: 2026/2/15 12:00:00
+
+📊 分析结果
+----------------------------------------
+💬 情感分析:
+   整体情感: 😟 -0.45
+   置信度: 90.0%
+
+⚠️ 风险评估:
+   风险等级: 🟢 low
+   风险评分: 0.30
+
+💡 关键洞察:
+   • LLM检测到较多负面情绪，建议关注用户不满的具体原因
+
+tancbot> 爱泼斯坦名单披露
+tancbot> exit
+👋 感谢使用 TancBot，再见！
+```
+
+## 项目结构
+
+```
+tancbot/
 ├── src/
-│   ├── data-collection/     # 数据采集模块
-│   │   ├── collector.js     # 数据采集主模块
-│   │   └── weibo-scraper.js # 微博数据抓取器
-│   ├── ai-analysis/         # AI分析引擎
-│   │   ├── analyzer.js      # 分析主模块
-│   │   ├── base-agent.js    # Agent基类
-│   │   ├── sentiment-agent.js # 情感分析Agent
-│   │   ├── topic-agent.js   # 主题提取Agent
-│   │   ├── risk-assessment-agent.js # 风险评估Agent
-│   │   └── validation-engine.js # 验证引擎
-│   ├── services/            # 服务模块
-│   │   ├── skill-manager.js # 技能管理器
-│   │   └── skill-integration.js # 技能集成
-│   ├── skills/              # 技能模块
-│   │   └── data-cleaning-skill.js # 数据清洗技能
-│   ├── utils/               # 工具模块
-│   │   ├── logger.js        # 日志工具
-│   │   └── database.js      # 数据库工具
-│   └── cli/                 # CLI界面
-│       └── index.js         # CLI主程序
-├── config/                  # 配置文件
-├── logs/                    # 日志文件
-├── data/                    # 数据文件
-└── skills/                  # 技能存储
+│   ├── ai-analysis/          # AI分析模块
+│   │   ├── enhanced-analyzer.js
+│   │   ├── llm-agent.js
+│   │   ├── llm-risk-agent.js
+│   │   ├── llm-sentiment-agent.js
+│   │   └── llm-topic-agent.js
+│   ├── cli/                  # 命令行界面
+│   │   └── tancbot.js
+│   ├── data-collection/      # 数据采集
+│   │   ├── real-data-collector-v2.js
+│   │   └── weibo-playwright-qr-searcher.js
+│   ├── monitoring/           # 监控模块
+│   ├── services/             # 服务模块
+│   ├── skills/               # 技能模块
+│   └── utils/                # 工具模块
+├── data/                     # 数据存储
+├── logs/                     # 日志文件
+├── .env                      # 环境变量配置
+├── .env.example              # 环境变量示例
+├── package.json
+└── README.md
 ```
 
-## 高级功能
+## 技术栈
 
-### 多轮分析验证
-系统会自动进行多轮分析，每轮都会验证结果的准确性，并根据验证结果进行优化。
+- **Node.js** - 运行环境
+- **Playwright** - 浏览器自动化
+- **通义千问 API** - LLM分析
+- **Chalk** - 终端美化
+- **Ora** - 进度指示器
 
-### 自动进化
-基于分析性能和用户反馈，系统会自动优化：
-- 数据清洗策略
-- Agent分析参数
-- 验证规则
+## 常见问题
 
-### Skill系统
-Skill系统提供可插拔的功能模块：
-- **自动注册**: 新技能自动注册到系统
-- **性能监控**: 实时监控技能执行效果
-- **自动进化**: 基于性能数据自动优化技能
+### Q: 二维码不显示或显示异常？
+确保终端窗口足够大，尝试调整终端字体大小。
 
-## 配置说明
+### Q: 登录超时？
+二维码有效期90秒，如果超时请重新运行命令。
 
-### 环境变量
-```bash
-# 数据库配置
-DB_PATH=./data/opinion.db
+### Q: API调用失败？
+检查`.env`文件中的API密钥是否正确，确认API余额是否充足。
 
-# 日志配置
-LOG_LEVEL=info
-LOG_FILE=./logs/system.log
+### Q: 搜索结果为空？
+尝试更换关键词或增加搜索结果数量。
 
-# 数据采集配置
-WEIBO_COOKIE=your_weibo_cookie_here
-COLLECTION_INTERVAL=30
-MAX_KEYWORDS=10
+## 版本历史
 
-# AI分析配置
-OPENAI_API_KEY=your_openai_api_key_here
-ANALYSIS_MODEL=gpt-3.5-turbo
-MAX_ANALYSIS_TOKENS=2000
-
-# 系统配置
-MAX_CONCURRENT_TASKS=5
-CACHE_TTL=3600
-```
-
-### 微博Cookie获取
-1. 登录微博网页版
-2. 打开浏览器开发者工具
-3. 在Network标签中找到任意请求
-4. 复制请求头中的Cookie值
-
-## 开发指南
-
-### 添加新的Agent
-1. 继承 `BaseAgent` 类
-2. 实现 `process` 方法
-3. 在 `AIAnalyzer` 中注册新Agent
-
-### 添加新的Skill
-1. 创建技能类，实现 `execute` 方法
-2. 在 `SkillIntegration` 中注册技能
-3. 在适当的地方调用技能
-
-### 自定义验证规则
-1. 在 `ValidationEngine` 中添加验证方法
-2. 在验证规则中注册新方法
-
-## 故障排除
-
-### 常见问题
-
-1. **数据采集失败**
-   - 检查微博Cookie是否有效
-   - 检查网络连接
-   - 查看日志文件获取详细信息
-
-2. **分析结果不准确**
-   - 增加数据量
-   - 调整分析参数
-   - 检查Agent配置
-
-3. **技能进化失败**
-   - 检查技能配置
-   - 查看性能数据
-   - 手动调整进化参数
-
-### 日志查看
-```bash
-# 查看系统日志
-tail -f logs/system.log
-
-# 查看特定日期的日志
-cat logs/system.log | grep "2024-01-01"
-```
-
-## 性能优化
-
-### 数据采集优化
-- 使用代理池避免被封
-- 设置合理的采集间隔
-- 实现数据缓存机制
-
-### 分析性能优化
-- 使用并行处理
-- 实现结果缓存
-- 优化Agent算法
-
-## 安全考虑
-
-- 妥善保管API密钥和Cookie
-- 定期更新敏感信息
-- 限制访问权限
-- 加密存储敏感数据
-
-## 更新日志
-
-### v1.0.0 (2024-01-01)
-- ✨ 初始版本发布
-- 🎯 基础数据采集功能
-- 🤖 多Agent AI分析引擎
-- ⚡ 自动进化Skill系统
-- 📊 友好的CLI界面
-
-## 贡献指南
-
-欢迎提交Issue和Pull Request来改进系统。
-
-### 开发环境搭建
-```bash
-git clone <repository>
-cd public-opinion-system
-npm install
-npm run dev
-```
-
-### 提交规范
-- 使用语义化版本号
-- 编写清晰的提交信息
-- 添加适当的测试用例
-- 更新相关文档
+### V1.0.0 (2026-02-15)
+- ✅ 微博数据采集（二维码登录）
+- ✅ LLM多Agent分析（情感、主题、风险）
+- ✅ 研判报告生成
+- ✅ 交互式CLI命令
+- ✅ 连续分析多个话题
+- ✅ 后台浏览器运行
 
 ## 许可证
 
-MIT License - 详见 [LICENSE](LICENSE) 文件
+MIT License
 
-## 联系方式
+## 作者
 
-如有问题或建议，请通过以下方式联系：
-- 提交Issue
-- 发送邮件
-- 加入讨论组
-
----
-
-**舆情研判系统V1** - 让舆情分析更智能、更高效！ 🚀
+TancBot Team
