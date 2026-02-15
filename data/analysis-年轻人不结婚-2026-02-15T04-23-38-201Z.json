@@ -1,0 +1,371 @@
+{
+  "taskId": "analysis_1771129132354_7ktrq4ehu",
+  "timestamp": "2026-02-15T04:23:38.161Z",
+  "iterations": 5,
+  "finalConfidence": 0.6875555555555556,
+  "summary": {
+    "overallAssessment": "第5轮多Agent分析结果",
+    "sentiment": {
+      "overall": 0,
+      "confidence": 0.8460000000000001
+    },
+    "topics": [
+      {
+        "name": "```json",
+        "weight": 1,
+        "keywords": []
+      },
+      {
+        "name": "\"topics\": [",
+        "weight": 0.3333333333333333,
+        "keywords": []
+      },
+      {
+        "name": "\"topic_id\": 1,",
+        "weight": 0.2,
+        "keywords": []
+      },
+      {
+        "name": "\"topic_name\": \"经济压力与婚姻成本\",",
+        "weight": 0.16666666666666666,
+        "keywords": []
+      },
+      {
+        "name": "\"topic_weight\": 0.85,",
+        "weight": 0.1,
+        "keywords": []
+      }
+    ],
+    "risks": {
+      "level": "medium",
+      "score": 0.3,
+      "highRiskCount": 0
+    },
+    "keyInsights": [
+      "LLM分析显示情感分布相对均衡，用户态度较为中性",
+      "最突出的情绪是\"sadness\"，相关度0.1",
+      "LLM主题分析显示，\"```json\"是最主要讨论主题，权重100.0%",
+      "LLM提取的关键词汇包括：```json、\"高频关键词\":、\"keyword\":、\"年轻人\"、0.9",
+      "LLM主题建模置信度较低，建议增加数据量或优化分析参数",
+      "LLM检测到reputation、operation类别存在高风险",
+      "LLM分析显示风险趋势正在恶化，需要加强监控和预防措施"
+    ],
+    "recommendations": [
+      "```json",
+      "\"风险评估结果\": {",
+      "\"风险描述\": \"年轻人不结婚现象日益普遍，可能对社会结构、经济模式、家庭功能和人口增长产生深远影响",
+      "\"风险来源\": [",
+      "\"经济压力大，房价高、生活成本高\","
+    ]
+  },
+  "agentResults": [
+    {
+      "name": "LLMSentimentAgent",
+      "type": "sentiment",
+      "confidence": 0.8460000000000001,
+      "success": true
+    },
+    {
+      "name": "LLMTopicAgent",
+      "type": "topic",
+      "confidence": 0.6666666666666666,
+      "success": true
+    },
+    {
+      "name": "LLMRiskAgent",
+      "type": "risk",
+      "confidence": 0.55,
+      "success": true
+    }
+  ],
+  "rawResults": {
+    "sentiment": {
+      "overallSentiment": -0.05399999999999999,
+      "sentimentDistribution": {
+        "positive": 0,
+        "negative": 1,
+        "neutral": 4,
+        "mixed": 0
+      },
+      "emotionDistribution": {
+        "sadness": 0.7
+      },
+      "detailedAnalysis": [
+        {
+          "id": "5259220998161245",
+          "content": "为什么现在越来越多的年轻人选择不结婚↓#2030年独居人口或达到2亿人#[比心心]#年轻人为何还是对独居充满忧虑# L晚风挽余生的微博视频 ​",
+          "sentiment": "neutral",
+          "score": 0.15,
+          "confidence": 0.82,
+          "emotions": [],
+          "aspects": [
+            "独居现象",
+            "社会趋势",
+            "心理压力"
+          ],
+          "keywords": [
+            "不结婚",
+            "独居",
+            "忧虑"
+          ],
+          "explanation": "文本主要探讨了年轻人不结婚的现象，以及由此带来的心理和社会压力。虽然没有明显的负面情绪，但整体语气偏向中性，带有对未来的担忧和不确定性。",
+          "language": "zh",
+          "culturalContext": "在中国传统文化中，婚姻被视为人生的重要组成部分，因此讨论‘不结婚’会引发对社会结构和个人选择的深层思考，表达方式通常较为含蓄。"
+        },
+        {
+          "id": "5264496681026902",
+          "content": "#部分年轻人因高额彩礼推迟成家#不是不想结婚，是结不起。高额彩礼压垮爱意，拖慢婚期，年轻人被迫推迟成家。别让物质，辜负真心与陪伴。 ​",
+          "sentiment": "negative",
+          "score": -0.65,
+          "confidence": 0.9,
+          "emotions": [
+            {
+              "type": "sadness",
+              "intensity": 0.7
+            }
+          ],
+          "aspects": [
+            "经济压力",
+            "彩礼问题",
+            "婚姻制度"
+          ],
+          "keywords": [
+            "高额彩礼",
+            "结不起",
+            "物质压垮"
+          ],
+          "explanation": "文本明确表达了因经济压力（如高额彩礼）导致年轻人推迟婚期的不满与无奈，情感倾向明显负面，情绪以失望和沮丧为主。",
+          "language": "zh",
+          "culturalContext": "在中国，彩礼是传统婚俗的一部分，但在现代社会中，其金额过高常被视为一种负担，容易引发负面情绪。"
+        },
+        {
+          "id": "5254918979194790",
+          "content": "我深圳杭州两边公司的小同事，不管男男女女，好多人都没有想结婚的打算。他们都在20多岁和30多一点之间，正值青春年少，目光所致要做的事情特别多，为什么现在年轻人都不想结婚？一是觉得经济有压力，二是自己对婚姻的期待比较高，三是担心结婚后的风险，四是时间和社交限制，没有办法去找到匹配的对 ​  展开c",
+          "sentiment": "neutral",
+          "score": 0.05,
+          "confidence": 0.88,
+          "emotions": [],
+          "aspects": [
+            "婚姻观念变化",
+            "经济因素",
+            "社交限制"
+          ],
+          "keywords": [
+            "不想结婚",
+            "经济压力",
+            "时间限制"
+          ],
+          "explanation": "文本以客观描述的方式分析了年轻人不结婚的原因，包括经济、个人期待、风险和社交等多方面因素，情感上保持中立，未表现出强烈的情绪倾向。",
+          "language": "zh",
+          "culturalContext": "在当代中国，年轻人对婚姻的态度更加理性化，倾向于从现实角度分析问题，因此表达方式更偏向于分析而非情绪宣泄。"
+        },
+        {
+          "id": "5257250601959828",
+          "content": "郎咸平：一辈子不结婚会怎样？日本给出了答案。 L麒炜投资的微博视频 ​",
+          "sentiment": "neutral",
+          "score": 0.1,
+          "confidence": 0.8,
+          "emotions": [],
+          "aspects": [
+            "婚姻选择",
+            "社会影响",
+            "日本经验"
+          ],
+          "keywords": [
+            "不结婚",
+            "日本",
+            "答案"
+          ],
+          "explanation": "文本通过引用日本案例来探讨不结婚的可能后果，语气较为中性，旨在引发思考，而非表达强烈的正面或负面情绪。",
+          "language": "zh",
+          "culturalContext": "中文语境中，引用国外案例常用于增强观点的说服力，但不会直接表达强烈的情感，因此整体情绪较为中性。"
+        },
+        {
+          "id": "5253130893923791",
+          "content": "为什么年轻人都不想结婚了 L图图和糊涂的微博视频  ​",
+          "sentiment": "neutral",
+          "score": 0.08,
+          "confidence": 0.83,
+          "emotions": [],
+          "aspects": [
+            "婚姻观念",
+            "社会趋势",
+            "个体选择"
+          ],
+          "keywords": [
+            "不想结婚",
+            "年轻人",
+            "原因"
+          ],
+          "explanation": "文本以提问形式探讨年轻人不结婚的原因，语气平和，没有明显的情感倾向，更多是引导读者进行反思和讨论。",
+          "language": "zh",
+          "culturalContext": "中文网络环境中，提问式内容常用于引发共鸣或讨论，情感表达较为克制，避免直接情绪化表述。"
+        }
+      ],
+      "keyInsights": [
+        "LLM分析显示情感分布相对均衡，用户态度较为中性",
+        "最突出的情绪是\"sadness\"，相关度0.1"
+      ],
+      "confidence": 0.8460000000000001,
+      "modelInfo": {
+        "name": "qwen-turbo",
+        "provider": "qwen",
+        "type": "LLM"
+      }
+    },
+    "topic": {
+      "topics": [
+        {
+          "name": "```json",
+          "weight": 1,
+          "keywords": []
+        },
+        {
+          "name": "\"topics\": [",
+          "weight": 0.3333333333333333,
+          "keywords": []
+        },
+        {
+          "name": "\"topic_id\": 1,",
+          "weight": 0.2,
+          "keywords": []
+        },
+        {
+          "name": "\"topic_name\": \"经济压力与婚姻成本\",",
+          "weight": 0.16666666666666666,
+          "keywords": []
+        },
+        {
+          "name": "\"topic_weight\": 0.85,",
+          "weight": 0.1,
+          "keywords": []
+        }
+      ],
+      "keywords": [
+        "```json",
+        "\"高频关键词\":",
+        "\"keyword\":",
+        "\"年轻人\"",
+        "0.9",
+        "\"context\":",
+        "\"中性\"",
+        "\"结婚\"",
+        "0.85",
+        "社会期待和风险。\""
+      ],
+      "themes": [],
+      "topicDistribution": {},
+      "keywordDistribution": {},
+      "detailedAnalysis": [
+        "```json\n{\n  \"topics\": [\n    {\n      \"topic_id\": 1,\n      \"topic_name\": \"经济压力与婚姻成本\",\n      \"description\": \"讨论年轻人因经济负担而推迟或放弃结婚的现状，包括彩礼、房价、生活成本等经济因素对婚姻决策的影响。\",\n      \"keywords\": [\"彩礼\", \"经济压力\", \"生活成本\", \"房价\", \"婚期\", \"物质\", \"婚姻成本\", \"经济负担\", \"结婚费用\", \"经济独立\"],\n      \"topic_weight\": 0.85,\n      \"relevance_examples\": [\n        \"不是不想结婚，是结不起。高额彩礼压垮爱意，拖慢婚期，年轻人被迫推迟成家。\",\n        \"他们都在20多岁和30多一点之间，正值青春年少，目光所致要做的事情特别多，为什么现在年轻人都不想结婚？一是觉得经济有压力\"\n      ],\n      \"importance_score\": 9.2\n    },\n    {\n      \"topic_id\": 2,\n "
+      ],
+      "keyInsights": [
+        "LLM主题分析显示，\"```json\"是最主要讨论主题，权重100.0%",
+        "LLM提取的关键词汇包括：```json、\"高频关键词\":、\"keyword\":、\"年轻人\"、0.9",
+        "LLM主题建模置信度较低，建议增加数据量或优化分析参数"
+      ],
+      "confidence": 0.6666666666666666,
+      "modelInfo": {
+        "name": "qwen-turbo",
+        "provider": "qwen",
+        "type": "LLM",
+        "analysisDepth": "comprehensive"
+      }
+    },
+    "risk": {
+      "overallRisk": {
+        "level": "medium",
+        "score": 0.3,
+        "confidence": 0.7,
+        "urgency": "moderate",
+        "description": "```json\n{\n  \"整体风险等级\": \"low\",\n  \"风险评分\": 0.3,\n  \"置信度\": 0.75,\n  \"紧急程度\": \"moderate\",\n  \"详细风险分析\": {\n    \"声誉风险\": \"文本内容主要聚焦于社会现象和个体选择，未直接提及具体品牌或企业，因此对特定品牌的声誉影响较小。但若涉及婚恋相关行业（如婚庆、房产、金融等），可能间接影响公众对其服务的接受度。\",\n    \"运营风险\": \"目前无明显迹象表明该话题直接影响企业运营，但若企业涉及婚恋服务、房地产、家庭消费等领域，需关注潜在客户行为变化带来的市场波动。\",\n    \"财务风险\": \"短期内对财务影响有限，但长期来看，若年轻人结婚率持续下降，可能影响与婚姻相关的产业（如婚房、婚礼、育儿产品等）的市场需求。\",\n    \"法律风险\": \"文本中未涉及任何法律争议或违规行为，因此法律风险较低。\",\n    \"战略风险\": \"对于婚恋相关企业而言，需关注长期趋势，调整业务模式以适应年轻群体的婚育观念变化，否则可能面临市场份额流失的风险。\"\n  },\n  \"主要风险驱动因素\": [\n    \"经济压力（如"
+      },
+      "riskCategories": {
+        "reputation": {
+          "level": "high",
+          "score": 0.3,
+          "description": "声誉风险分析"
+        },
+        "operation": {
+          "level": "high",
+          "score": 0.3,
+          "description": "运营风险分析"
+        }
+      },
+      "riskFactors": [
+        {
+          "name": "```json",
+          "description": "```json",
+          "severity": "medium"
+        },
+        {
+          "name": "\"主要风险因素清单\": [",
+          "description": "\"主要风险因素清单\": [",
+          "severity": "medium"
+        },
+        {
+          "name": "\"风险因素\": \"婚姻观念转变\",",
+          "description": "\"风险因素\": \"婚姻观念转变\",",
+          "severity": "medium"
+        },
+        {
+          "name": "\"类型\": \"内部因素 - 文化\",",
+          "description": "\"类型\": \"内部因素 - 文化\",",
+          "severity": "medium"
+        },
+        {
+          "name": "\"描述\": \"年轻人对婚姻的重视程度下降，更注重个人自由和生活质量",
+          "description": "\"描述\": \"年轻人对婚姻的重视程度下降，更注重个人自由和生活质量",
+          "severity": "medium"
+        }
+      ],
+      "riskTrends": {
+        "direction": "worsening",
+        "velocity": "fast",
+        "acceleration": 0,
+        "description": "```json\n{\n  \"trend_analysis\": {\n    \"trend_direction\": \"worsening\",\n    \"development_speed\": \"accelerating\",\n    \"change_acceleration\": \"moderate_to_high\",\n    \"key_turning_points\": [\n      \"2010年代中期开始，结婚率持续下降\",\n      \"2020年后疫情对婚姻观念的冲击加剧\",\n      \"社交媒体和网络文化对婚恋观的重塑\"\n    ],\n    \"predictive_indicators\":"
+      },
+      "riskHotspots": [],
+      "earlyWarnings": [
+        {
+          "type": "general",
+          "message": "```json",
+          "severity": "medium"
+        },
+        {
+          "type": "general",
+          "message": "\"warnings\": [",
+          "severity": "medium"
+        },
+        {
+          "type": "general",
+          "message": "\"level\": \"一级预警（绿色）\",",
+          "severity": "medium"
+        }
+      ],
+      "recommendations": [
+        "```json",
+        "\"风险评估结果\": {",
+        "\"风险描述\": \"年轻人不结婚现象日益普遍，可能对社会结构、经济模式、家庭功能和人口增长产生深远影响",
+        "\"风险来源\": [",
+        "\"经济压力大，房价高、生活成本高\","
+      ],
+      "detailedAnalysis": [],
+      "keyInsights": [
+        "LLM检测到reputation、operation类别存在高风险",
+        "LLM分析显示风险趋势正在恶化，需要加强监控和预防措施"
+      ],
+      "confidence": 0.55,
+      "modelInfo": {
+        "name": "qwen-turbo",
+        "provider": "qwen",
+        "type": "LLM"
+      }
+    }
+  },
+  "nextSteps": [
+    "配置LLM服务以启用高级分析功能",
+    "添加更多数据源以提高分析全面性",
+    "定期更新分析模型以保持时效性"
+  ]
+}

@@ -1,0 +1,554 @@
+{
+  "taskId": "analysis_1771131657397_kuapxqv5x",
+  "timestamp": "2026-02-15T05:06:57.301Z",
+  "iterations": 5,
+  "finalConfidence": 0.6696666666666667,
+  "summary": {
+    "overallAssessment": "第5轮多Agent分析结果",
+    "sentiment": {
+      "overall": 0,
+      "confidence": 0.859
+    },
+    "topics": [
+      {
+        "name": "```json",
+        "weight": 1,
+        "keywords": []
+      },
+      {
+        "name": "\"topics\": [",
+        "weight": 0.3333333333333333,
+        "keywords": []
+      },
+      {
+        "name": "\"topic_name\": \"经济压力与婚姻成本\",",
+        "weight": 0.2,
+        "keywords": []
+      },
+      {
+        "name": "\"description\": \"讨论年轻人因经济负担、彩礼等物质因素而推迟或放弃结婚的现状",
+        "weight": 0.16666666666666666,
+        "keywords": []
+      },
+      {
+        "name": "\"weight\": 0.25,",
+        "weight": 0.1111111111111111,
+        "keywords": []
+      }
+    ],
+    "risks": {
+      "level": "high",
+      "score": 0.3,
+      "highRiskCount": 0
+    },
+    "keyInsights": [
+      "LLM分析显示情感分布相对均衡，用户态度较为中性",
+      "最突出的情绪是\"sadness\"，相关度0.1",
+      "LLM主题分析显示，\"```json\"是最主要讨论主题，权重100.0%",
+      "LLM提取的关键词汇包括：```json、\"高频关键词\":、\"keyword\":、\"年轻人\"、10",
+      "LLM主题建模置信度较低，建议增加数据量或优化分析参数",
+      "LLM识别出high级别风险，需要立即关注和应对",
+      "LLM检测到reputation、operation类别存在高风险"
+    ],
+    "recommendations": [
+      "建议配置更多数据源以提高分析准确性"
+    ]
+  },
+  "agentResults": [
+    {
+      "name": "LLMSentimentAgent",
+      "type": "sentiment",
+      "confidence": 0.859,
+      "success": true
+    },
+    {
+      "name": "LLMTopicAgent",
+      "type": "topic",
+      "confidence": 0.6,
+      "success": true
+    },
+    {
+      "name": "LLMRiskAgent",
+      "type": "risk",
+      "confidence": 0.55,
+      "success": true
+    }
+  ],
+  "rawResults": {
+    "sentiment": {
+      "overallSentiment": -0.125,
+      "sentimentDistribution": {
+        "positive": 1,
+        "negative": 3,
+        "neutral": 6,
+        "mixed": 0
+      },
+      "emotionDistribution": {
+        "sadness": 1.4,
+        "anger": 0.5,
+        "joy": 0.7
+      },
+      "detailedAnalysis": [
+        {
+          "id": "5259220998161245",
+          "content": "为什么现在越来越多的年轻人选择不结婚↓#2030年独居人口或达到2亿人#[比心心]#年轻人为何还是对独居充满忧虑# L晚风挽余生的微博视频 ​",
+          "sentiment": "neutral",
+          "score": 0.15,
+          "confidence": 0.82,
+          "emotions": [],
+          "aspects": [
+            "独居现象",
+            "社会趋势",
+            "心理压力"
+          ],
+          "keywords": [
+            "不结婚",
+            "独居人口",
+            "忧虑"
+          ],
+          "explanation": "文本关注年轻人不结婚的现象，并提到独居人口可能增加，同时表达对独居生活存在忧虑。整体语气中性，没有明显正面或负面情绪。",
+          "language": "zh",
+          "culturalContext": "在中国文化中，婚姻被视为人生的重要部分，因此讨论不结婚的现象常带有一定社会关注和担忧的色彩。"
+        },
+        {
+          "id": "5264496681026902",
+          "content": "#部分年轻人因高额彩礼推迟成家#不是不想结婚，是结不起。高额彩礼压垮爱意，拖慢婚期，年轻人被迫推迟成家。别让物质，辜负真心与陪伴。 ​",
+          "sentiment": "negative",
+          "score": -0.65,
+          "confidence": 0.9,
+          "emotions": [
+            {
+              "type": "sadness",
+              "intensity": 0.7
+            }
+          ],
+          "aspects": [
+            "经济压力",
+            "彩礼问题",
+            "婚姻期望"
+          ],
+          "keywords": [
+            "高额彩礼",
+            "结不起",
+            "婚期拖延"
+          ],
+          "explanation": "文本表达了对高额彩礼导致年轻人推迟成家的不满与无奈，情感偏向负面，表现出对物质压力下婚姻受阻的失望和悲伤。",
+          "language": "zh",
+          "culturalContext": "在中国，彩礼是传统婚俗的一部分，但近年来因金额过高引发争议，成为年轻人不愿结婚的重要原因之一。"
+        },
+        {
+          "id": "5254918979194790",
+          "content": "我深圳杭州两边公司的小同事，不管男男女女，好多人都没有想结婚的打算。他们都在20多岁和30多一点之间，正值青春年少，目光所致要做的事情特别多，为什么现在年轻人都不想结婚？一是觉得经济有压力，二是自己对婚姻的期待比较高，三是担心结婚后的风险，四是时间和社交限制，没有办法去找到匹配的对 ​  展开c",
+          "sentiment": "neutral",
+          "score": 0.05,
+          "confidence": 0.88,
+          "emotions": [],
+          "aspects": [
+            "婚姻观念变化",
+            "经济压力",
+            "社交限制"
+          ],
+          "keywords": [
+            "不结婚",
+            "经济压力",
+            "时间限制"
+          ],
+          "explanation": "文本以客观描述的方式分析了年轻人不结婚的原因，包括经济、个人期待、风险和社交等多方面因素，情感倾向中性。",
+          "language": "zh",
+          "culturalContext": "在当代中国，年轻人对婚姻的态度更加理性，更注重个人发展和生活质量，这种分析式表达反映了社会观念的变化。"
+        },
+        {
+          "id": "5257250601959828",
+          "content": "郎咸平：一辈子不结婚会怎样？日本给出了答案。 L麒炜投资的微博视频 ​",
+          "sentiment": "neutral",
+          "score": 0.1,
+          "confidence": 0.8,
+          "emotions": [],
+          "aspects": [
+            "婚姻选择",
+            "社会影响",
+            "日本案例"
+          ],
+          "keywords": [
+            "不结婚",
+            "日本",
+            "答案"
+          ],
+          "explanation": "文本通过引用日本案例探讨不结婚的后果，语气较为中立，主要目的是引发思考和讨论，未表现出强烈的情感倾向。",
+          "language": "zh",
+          "culturalContext": "在中国，人们常通过其他国家的案例来反思自身社会问题，这种表达方式常见且中性。"
+        },
+        {
+          "id": "5253130893923791",
+          "content": "为什么年轻人都不想结婚了 L图图和糊涂的微博视频  ​",
+          "sentiment": "neutral",
+          "score": 0.08,
+          "confidence": 0.83,
+          "emotions": [],
+          "aspects": [
+            "婚姻意愿下降",
+            "社会现象",
+            "青年心理"
+          ],
+          "keywords": [
+            "不想结婚",
+            "年轻人",
+            "原因"
+          ],
+          "explanation": "文本以提问形式探讨年轻人不结婚的原因，语气平和，没有明显的情绪色彩，属于中性分析。",
+          "language": "zh",
+          "culturalContext": "中文语境中，提出问题往往是一种中性的表达方式，尤其在社交媒体上，常用于引发讨论而非表达明确立场。"
+        },
+        {
+          "id": "5254048930337226",
+          "content": "关于死了么，不结婚的年轻人有话说：死都死了，被不被身边的人发现有什么关系呢？脱口秀 | 梁海源 L限时失序的微博视频 ​",
+          "sentiment": "negative",
+          "score": -0.65,
+          "confidence": 0.82,
+          "emotions": [
+            {
+              "type": "sadness",
+              "intensity": 0.7
+            },
+            {
+              "type": "anger",
+              "intensity": 0.5
+            }
+          ],
+          "aspects": [
+            "社会压力",
+            "个人选择"
+          ],
+          "keywords": [
+            "死",
+            "不被发现",
+            "脱口秀"
+          ],
+          "explanation": "文本表达了对不结婚年轻人的无奈和讽刺，使用‘死都死了’等极端表达方式，带有强烈的负面情绪。同时，通过脱口秀的形式进行调侃，反映出社会对不结婚现象的不理解与批判。",
+          "language": "zh",
+          "culturalContext": "中文语境中，‘死’常用于夸张表达，此处可能带有自嘲意味，但整体仍传达出对不结婚现象的负面态度。"
+        },
+        {
+          "id": "5261785271894647",
+          "content": "看到现在很多年轻人选择不结婚我很欣慰，20年前当我提出很多不结婚的理由时直接被家人给镇压下去了。也许在他们眼中，不结婚是对社会不负责任，是对家庭不负责任。现在看来，我当年论证的都是对的，是符合时代发展的，只可惜我生错了时代！！ ​",
+          "sentiment": "positive",
+          "score": 0.72,
+          "confidence": 0.91,
+          "emotions": [
+            {
+              "type": "joy",
+              "intensity": 0.7
+            }
+          ],
+          "aspects": [
+            "个人选择",
+            "时代发展"
+          ],
+          "keywords": [
+            "欣慰",
+            "符合时代",
+            "生错时代"
+          ],
+          "explanation": "作者对年轻人不结婚的现象表示支持，并认为这是符合时代发展的选择。尽管提到过去被家人压制，但整体情绪积极，表现出对自我选择的认同和自豪感。",
+          "language": "zh",
+          "culturalContext": "在中文文化中，个人选择逐渐受到更多尊重，尤其是年轻一代更强调自我实现，因此这种观点具有一定的时代共鸣。"
+        },
+        {
+          "id": "5261966349697727",
+          "content": "年轻人不结婚不生孩子只是一个结果，其实更深层次的问题在于：年轻人对自己的未来很惶恐，他们不想把这种惶恐延续到下一代。 ​",
+          "sentiment": "neutral",
+          "score": -0.15,
+          "confidence": 0.88,
+          "emotions": [],
+          "aspects": [
+            "经济压力",
+            "心理状态",
+            "社会责任"
+          ],
+          "keywords": [
+            "惶恐",
+            "未来",
+            "下一代"
+          ],
+          "explanation": "文本客观分析了年轻人不结婚的原因，指出其背后是经济和社会压力导致的心理不安。语气较为中性，没有明显的情感倾向，但透露出对社会问题的关注。",
+          "language": "zh",
+          "culturalContext": "中文语境中，讨论社会问题时往往采用较为理性的表达方式，避免直接情感宣泄，因此该文本呈现中性情感。"
+        },
+        {
+          "id": "5254562372124956",
+          "content": "当代年轻人的心理建设就是只取悦自己，对于任何没有确定性和难度的事情，宁愿第一时间放弃。舔狗崩盘，不谈恋爱，不结婚，是一个没有办法的事情。 ​",
+          "sentiment": "negative",
+          "score": -0.78,
+          "confidence": 0.89,
+          "emotions": [],
+          "aspects": [
+            "心理建设",
+            "社会期望",
+            "人际关系"
+          ],
+          "keywords": [
+            "只取悦自己",
+            "放弃",
+            "不结婚"
+          ],
+          "explanation": "文本批评了当代年轻人缺乏责任感，认为他们只关注自身感受而忽视社会期待，语气带有明显的不满和失望，体现出对年轻人行为的负面评价。",
+          "language": "zh",
+          "culturalContext": "中文文化中，家庭和社会责任被视为重要价值，因此对不结婚的年轻人持批评态度，这反映了传统观念与现代价值观的冲突。"
+        },
+        {
+          "id": "5248512810027182",
+          "content": "世界独有的奇特案例：日本年轻人的现状，集体躺平！众所周知，在上个世纪末泡沫经济危机爆发之后，日本就陷入了长达数十年的经济停滞，多年来GDP都在原地踏步，而经过多年发展，各项经济指标仍然没有达到上个世纪的巅峰水平。而在这种长期的经济停滞也给日本带来了一种独特的社会现象，那就是低欲 ​  展开c",
+          "sentiment": "neutral",
+          "score": -0.12,
+          "confidence": 0.86,
+          "emotions": [],
+          "aspects": [
+            "经济停滞",
+            "社会现象",
+            "日本案例"
+          ],
+          "keywords": [
+            "经济停滞",
+            "低欲",
+            "躺平"
+          ],
+          "explanation": "文本主要描述日本年轻人的现状，分析其背后的社会经济原因，语气客观、理性，未表现出强烈的情感倾向，属于中性分析。",
+          "language": "zh",
+          "culturalContext": "中文语境中，对其他国家的社会现象进行分析时通常保持中立态度，尤其在涉及经济和社会结构问题时，更倾向于客观描述而非情感表达。"
+        }
+      ],
+      "keyInsights": [
+        "LLM分析显示情感分布相对均衡，用户态度较为中性",
+        "最突出的情绪是\"sadness\"，相关度0.1"
+      ],
+      "confidence": 0.859,
+      "modelInfo": {
+        "name": "qwen-turbo",
+        "provider": "qwen",
+        "type": "LLM"
+      }
+    },
+    "topic": {
+      "topics": [
+        {
+          "name": "```json",
+          "weight": 1,
+          "keywords": []
+        },
+        {
+          "name": "\"topics\": [",
+          "weight": 0.3333333333333333,
+          "keywords": []
+        },
+        {
+          "name": "\"topic_name\": \"经济压力与婚姻成本\",",
+          "weight": 0.2,
+          "keywords": []
+        },
+        {
+          "name": "\"description\": \"讨论年轻人因经济负担、彩礼等物质因素而推迟或放弃结婚的现状",
+          "weight": 0.16666666666666666,
+          "keywords": []
+        },
+        {
+          "name": "\"weight\": 0.25,",
+          "weight": 0.1111111111111111,
+          "keywords": []
+        }
+      ],
+      "keywords": [
+        "```json",
+        "\"高频关键词\":",
+        "\"keyword\":",
+        "\"年轻人\"",
+        "10",
+        "0.95",
+        "\"context\":",
+        "是核心讨论对象。\"",
+        "\"中性\"",
+        "\"结婚\""
+      ],
+      "themes": [
+        {
+          "name": "```json",
+          "weight": 1
+        },
+        {
+          "name": "\"主要讨论主题概述\": \"年轻人不结婚的现象及其背后的原因",
+          "weight": 0.3333333333333333
+        }
+      ],
+      "topicDistribution": {},
+      "keywordDistribution": {},
+      "detailedAnalysis": [
+        "```json\n{\n  \"topics\": [\n    {\n      \"topic_name\": \"经济压力与婚姻成本\",\n      \"description\": \"讨论年轻人因经济负担、彩礼等物质因素而推迟或放弃结婚的现状。\",\n      \"keywords\": [\"经济压力\", \"彩礼\", \"婚期\", \"物质\", \"婚姻成本\", \"生活负担\", \"房价\", \"收入\", \"消费\", \"经济负担\"],\n      \"weight\": 0.25,\n      \"importance_score\": 9,\n      \"examples\": [\n        \"不是不想结婚，是结不起。高额彩礼压垮爱意，拖慢婚期，年轻人被迫推迟成家。\",\n        \"部分年轻人因高额彩礼推迟成家\"\n      ]\n    },\n    {\n      \"topic_name\": \"婚姻观念转变与个人选择\",\n      \"description\": \"探讨年轻人对婚姻态度的变化，包括对婚姻的期待、自我实现和独立意识增强。\",\n      \"keywords\": [\"不结婚\", \"婚姻观念\", "
+      ],
+      "keyInsights": [
+        "LLM主题分析显示，\"```json\"是最主要讨论主题，权重100.0%",
+        "LLM提取的关键词汇包括：```json、\"高频关键词\":、\"keyword\":、\"年轻人\"、10",
+        "LLM主题建模置信度较低，建议增加数据量或优化分析参数"
+      ],
+      "confidence": 0.6,
+      "modelInfo": {
+        "name": "qwen-turbo",
+        "provider": "qwen",
+        "type": "LLM",
+        "analysisDepth": "comprehensive"
+      }
+    },
+    "risk": {
+      "overallRisk": {
+        "level": "high",
+        "score": 0.3,
+        "confidence": 0.7,
+        "urgency": "high",
+        "description": "```json\n{\n  \"整体风险等级\": \"medium\",\n  \"风险评分\": 0.65,\n  \"置信度\": 0.82,\n  \"紧急程度\": \"moderate\",\n  \"详细风险分析\": {\n    \"声誉风险\": \"文本中提到的‘不结婚’现象可能引发公众对社会价值观、家庭观念和未来人口结构的讨论，若被误解或过度解读，可能影响品牌或机构在公众中的形象。例如，若某企业发布相关内容，可能被质疑对传统价值观的漠视。\",\n    \"运营风险\": \"虽然直接关联性较低，但若相关话题涉及社会情绪波动，可能间接影响企业员工士气、客户信任度及市场信心，尤其是在与家庭、婚姻相关的行业（如保险、房地产等）。\",\n    \"财务风险\": \"短期内无明显财务影响，但长期来看，若社会婚育率持续下降，可能影响消费市场结构，如婚庆、母婴产品、教育等领域，进而影响相关企业的收入预期。\",\n    \"法律风险\": \"目前未涉及具体法律问题，但若相关言论涉及歧视、性别偏见或煽动性内容，可能引发法律争议或监管关注。\",\n    \"战略风险\": \"若企业未能及时调整战略以适应社会趋势变化（如更多人选择独居、非传统家庭结"
+      },
+      "riskCategories": {
+        "reputation": {
+          "level": "high",
+          "score": 0.3,
+          "description": "声誉风险分析"
+        },
+        "operation": {
+          "level": "high",
+          "score": 0.3,
+          "description": "运营风险分析"
+        }
+      },
+      "riskFactors": [
+        {
+          "name": "```json",
+          "description": "```json",
+          "severity": "medium"
+        },
+        {
+          "name": "\"主要风险因素清单\": [",
+          "description": "\"主要风险因素清单\": [",
+          "severity": "medium"
+        },
+        {
+          "name": "\"风险因素\": \"婚姻观念转变\",",
+          "description": "\"风险因素\": \"婚姻观念转变\",",
+          "severity": "medium"
+        },
+        {
+          "name": "\"类型\": \"内部因素 - 文化\",",
+          "description": "\"类型\": \"内部因素 - 文化\",",
+          "severity": "medium"
+        },
+        {
+          "name": "\"描述\": \"年轻人对婚姻的重视程度下降，更倾向于个人自由和独立生活",
+          "description": "\"描述\": \"年轻人对婚姻的重视程度下降，更倾向于个人自由和独立生活",
+          "severity": "medium"
+        }
+      ],
+      "riskTrends": {
+        "direction": "stable",
+        "velocity": "slow",
+        "acceleration": 0,
+        "trend_analysis": {
+          "time_trend": {
+            "short_term": "稳定",
+            "medium_term": "上升",
+            "long_term": "持续上升"
+          },
+          "risk_intensity": {
+            "trend": "worsening",
+            "speed": "moderate",
+            "acceleration": "slight_increase"
+          },
+          "impact_scope": {
+            "trend": "expanding",
+            "speed": "moderate",
+            "acceleration": "slight_increase"
+          },
+          "development_speed": {
+            "trend": "moderate",
+            "acceleration": "slight_increase"
+          },
+          "direction_trend": {
+            "trend": "worsening",
+            "confidence": "high"
+          },
+          "key_turning_points": [
+            "2010年代中期：婚姻观念开始显著转变",
+            "2020年疫情后：年轻人婚育意愿进一步下降",
+            "2023年：政府出台鼓励生育政策，但效果有限"
+          ],
+          "predictive_indicators": [
+            "结婚率持续下降（数据来源：国家统计局）",
+            "适婚年龄人口比例下降",
+            "婚育相关社会服务需求增长",
+            "青年群体对婚姻的负面情绪指数上升"
+          ],
+          "time_window_assessment": {
+            "short_term": "未来1-2年内风险维持高位",
+            "medium_term": "3-5年内风险可能进一步加剧",
+            "long_term": "10年后可能出现结构性人口问题"
+          }
+        },
+        "prospective_judgment": {
+          "summary": "当前年轻人不结婚现象呈现持续上升趋势，风险强度和影响范围均在扩大。尽管短期内风险发展速度较为平稳，但长期来看，该趋势可能对社会结构、经济模式及家庭体系产生深远影响。",
+          "recommendations": [
+            "加强婚育观念引导与心理健康支持",
+            "优化生育支持政策并提升实施效果",
+            "推动多元化家庭模式的社会包容性",
+            "加强人口与社会政策的前瞻性研究"
+          ]
+        }
+      },
+      "riskHotspots": [
+        {
+          "topic": "```json",
+          "intensity": 0.5,
+          "description": "```json"
+        },
+        {
+          "topic": "\"地理热点\": {",
+          "intensity": 0.5,
+          "description": "\"地理热点\": {"
+        },
+        {
+          "topic": "\"regions\": [\"中国一线城市\", \"长三角地区\",",
+          "intensity": 0.5,
+          "description": "\"regions\": [\"中国一线城市\", \"长三角地区\", \"珠三角地区\"],"
+        }
+      ],
+      "earlyWarnings": [
+        {
+          "type": "general",
+          "message": "```json",
+          "severity": "medium"
+        },
+        {
+          "type": "general",
+          "message": "\"warnings\": [",
+          "severity": "medium"
+        },
+        {
+          "type": "general",
+          "message": "\"level\": \"一级预警（绿色）\",",
+          "severity": "medium"
+        }
+      ],
+      "recommendations": [],
+      "detailedAnalysis": [],
+      "keyInsights": [
+        "LLM识别出high级别风险，需要立即关注和应对",
+        "LLM检测到reputation、operation类别存在高风险"
+      ],
+      "confidence": 0.55,
+      "modelInfo": {
+        "name": "qwen-turbo",
+        "provider": "qwen",
+        "type": "LLM"
+      }
+    }
+  },
+  "nextSteps": [
+    "配置LLM服务以启用高级分析功能",
+    "添加更多数据源以提高分析全面性",
+    "定期更新分析模型以保持时效性"
+  ]
+}

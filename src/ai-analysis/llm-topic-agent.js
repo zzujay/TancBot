@@ -78,11 +78,8 @@ class LLMTopicAgent extends LLMAgent {
       
     } catch (error) {
       logger.error('LLM主题建模失败:', error);
-      
-      // 使用回退方案
-      const fallbackResults = await this.generateFallbackTopics(data, context);
-      Object.assign(results, fallbackResults);
-      results.confidence *= 0.6; // 降低置信度
+      results.confidence = 0.5;
+      results.keyInsights = ['LLM主题建模过程中发生错误，返回空结果'];
     }
 
     this.setConfidence(results.confidence);
@@ -268,125 +265,150 @@ ${allText.substring(0, 2000)}${allText.length > 2000 ? '...' : ''}
 
   parseOverallAnalysisResponse(response) {
     try {
-      const parsed = JSON.parse(response);
-      return {
-        themes: parsed.themes || parsed.topics || [],
-        confidence: parsed.confidence || 0.8,
-        insights: parsed.insights || []
-      };
+      // 尝试直接解析JSON
+      try {
+        const parsed = JSON.parse(response);
+        return {
+          themes: parsed.themes || parsed.topics || [],
+          confidence: parsed.confidence || 0.8,
+          insights: parsed.insights || []
+        };
+      } catch (jsonError) {
+        // 从文本中提取主题和洞察
+        const themes = [];
+        const insights = [];
+        const lines = response.split(/[。\n]/);
+        
+        lines.forEach((line, index) => {
+          const trimmed = line.trim();
+          if (trimmed.length > 5 && trimmed.length < 100) {
+            if (index < 3) {
+              themes.push({
+                name: trimmed.substring(0, 30),
+                weight: 1 / (index + 1)
+              });
+            }
+            insights.push(trimmed);
+          }
+        });
+        
+        return {
+          themes: themes.slice(0, 3),
+          confidence: 0.6,
+          insights: insights.slice(0, 5)
+        };
+      }
     } catch (error) {
-      // 备用解析
+      logger.warn('整体分析响应解析失败，返回空结果');
       return {
-        themes: ['产品质量', '用户体验', '价格价值'],
-        confidence: 0.7,
-        insights: ['整体分析基于规则提取']
+        themes: [],
+        confidence: 0.5,
+        insights: []
       };
     }
   }
 
   parseTopicModelingResponse(response) {
     try {
-      const parsed = JSON.parse(response);
-      
-      return {
-        topics: parsed.topics || parsed.results?.topics || [],
-        distribution: parsed.distribution || {},
-        detailedAnalysis: parsed.detailedAnalysis || [],
-        confidence: parsed.confidence || 0.8
-      };
+      // 尝试直接解析JSON
+      try {
+        const parsed = JSON.parse(response);
+        
+        return {
+          topics: parsed.topics || parsed.results?.topics || [],
+          distribution: parsed.distribution || {},
+          detailedAnalysis: parsed.detailedAnalysis || [],
+          confidence: parsed.confidence || 0.8
+        };
+      } catch (jsonError) {
+        // 从文本中提取主题
+        const topics = [];
+        const lines = response.split(/[。\n]/);
+        
+        lines.forEach((line, index) => {
+          const trimmed = line.trim();
+          if (trimmed.length > 3 && trimmed.length < 50) {
+            topics.push({
+              name: trimmed,
+              weight: 1 / (index + 1),
+              keywords: []
+            });
+          }
+        });
+        
+        return {
+          topics: topics.slice(0, 5),
+          distribution: {},
+          detailedAnalysis: [response.substring(0, 500)],
+          confidence: 0.6
+        };
+      }
     } catch (error) {
-      // 备用主题建模
-      return this.generateFallbackTopics();
+      logger.warn('主题建模响应解析失败，返回空结果');
+      return {
+        topics: [],
+        distribution: {},
+        detailedAnalysis: [],
+        confidence: 0.5
+      };
     }
   }
 
   parseKeywordExtractionResponse(response) {
     try {
-      const parsed = JSON.parse(response);
-      
-      return {
-        keywords: parsed.keywords || parsed.results?.keywords || [],
-        distribution: parsed.distribution || {},
-        confidence: parsed.confidence || 0.8
-      };
+      // 尝试直接解析JSON
+      try {
+        const parsed = JSON.parse(response);
+        
+        return {
+          keywords: parsed.keywords || parsed.results?.keywords || [],
+          distribution: parsed.distribution || {},
+          confidence: parsed.confidence || 0.8
+        };
+      } catch (jsonError) {
+        // 从文本中提取关键词
+        const keywords = [];
+        const words = response.split(/[，,、\s\n]+/);
+        
+        words.forEach(word => {
+          const trimmed = word.trim();
+          if (trimmed.length >= 2 && trimmed.length <= 10) {
+            keywords.push(trimmed);
+          }
+        });
+        
+        return {
+          keywords: [...new Set(keywords)].slice(0, 10),
+          distribution: {},
+          confidence: 0.6
+        };
+      }
     } catch (error) {
-      // 备用关键词提取
+      logger.warn('关键词提取响应解析失败，返回空结果');
       return {
-        keywords: ['产品', '质量', '用户', '体验', '价格'],
+        keywords: [],
         distribution: {},
-        confidence: 0.6
+        confidence: 0.5
       };
     }
   }
 
   parseTopicRelationsResponse(response) {
     try {
-      const parsed = JSON.parse(response);
-      return parsed.relations || parsed.topicRelations || {};
+      // 尝试直接解析JSON
+      try {
+        const parsed = JSON.parse(response);
+        return parsed.relations || parsed.topicRelations || {};
+      } catch (jsonError) {
+        // 返回空关系对象
+        return {
+          description: response.substring(0, 300)
+        };
+      }
     } catch (error) {
+      logger.warn('主题关系响应解析失败，返回空结果');
       return {};
     }
-  }
-
-  generateFallbackTopics() {
-    return {
-      topics: [
-        {
-          name: '产品质量',
-          description: '用户对产品品质的评价',
-          keywords: ['质量', '品质', '做工', '材料', '耐用性'],
-          weight: 0.25,
-          examples: ['产品质量很好', '做工精细']
-        },
-        {
-          name: '用户体验',
-          description: '用户使用产品的感受',
-          keywords: ['体验', '感受', '舒适度', '便利性', '满意度'],
-          weight: 0.20,
-          examples: ['用户体验不错', '使用很方便']
-        },
-        {
-          name: '价格价值',
-          description: '产品价格与价值的对比',
-          keywords: ['价格', '价值', '性价比', '昂贵', '便宜'],
-          weight: 0.18,
-          examples: ['价格合理', '性价比很高']
-        }
-      ],
-      distribution: {},
-      detailedAnalysis: [],
-      confidence: 0.6
-    };
-  }
-
-  generateFallbackTopics(data, context) {
-    // 基于规则的主题生成回退方案
-    const topics = [
-      {
-        name: '产品质量',
-        description: '关于产品质量的讨论',
-        keywords: ['质量', '品质', '做工', '材料'],
-        weight: 0.3,
-        examples: data.slice(0, 3).map(item => item.content)
-      },
-      {
-        name: '用户体验',
-        description: '用户体验相关讨论',
-        keywords: ['体验', '感受', '使用', '便利'],
-        weight: 0.25,
-        examples: data.slice(3, 6).map(item => item.content)
-      }
-    ];
-    
-    return {
-      topics: topics,
-      keywords: ['产品', '质量', '用户', '体验'],
-      themes: ['产品质量是主要关注点', '用户体验很重要'],
-      topicDistribution: { '产品质量': 0.5, '用户体验': 0.5 },
-      keywordDistribution: {},
-      detailedAnalysis: [],
-      confidence: 0.5
-    };
   }
 
   generateTopicInsights(results, context) {

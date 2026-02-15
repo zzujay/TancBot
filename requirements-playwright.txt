@@ -1,3 +1,0 @@
-# Playwright自动登录依赖安装
-
-playwright==1.40.0

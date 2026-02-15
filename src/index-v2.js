@@ -13,7 +13,7 @@ const AdvancedDataCollector = require('./data-collection/advanced-collector');
 const EnhancedAIAnalyzer = require('./ai-analysis/enhanced-analyzer');
 const SkillManager = require('./services/skill-manager');
 const RealTimeMonitor = require('./monitoring/realtime-monitor');
-const WebServer = require('./web/server');
+
 
 class PublicOpinionSystemV2 {
   constructor() {
@@ -25,7 +25,6 @@ class PublicOpinionSystemV2 {
     this.aiAnalyzer = null;
     this.skillManager = null;
     this.realTimeMonitor = null;
-    this.webServer = null;
     
     this.isRunning = false;
     this.startTime = null;
@@ -39,9 +38,6 @@ class PublicOpinionSystemV2 {
       .description('基于AI的多智能体舆情分析与研判系统')
       .version('2.0.0')
       .option('-c, --config <path>', '配置文件路径', 'config/system.json')
-      .option('-p, --port <port>', 'Web服务器端口', '3000')
-      .option('-h, --host <host>', 'Web服务器主机', 'localhost')
-      .option('--no-web', '禁用Web界面')
       .option('--no-monitor', '禁用实时监控')
       .option('--no-collector', '禁用数据收集')
       .option('--no-analyzer', '禁用AI分析')
@@ -113,10 +109,15 @@ class PublicOpinionSystemV2 {
       this.isRunning = true;
       
       console.log('✅ 舆情研判系统V2启动成功！');
-      console.log(`📊 Web界面: http://${options.host}:${options.port}`);
-      console.log(`📝 API文档: http://${options.host}:${options.port}/api/docs`);
       console.log(`🔧 配置文件: ${options.config}`);
       console.log(`🕐 启动时间: ${new Date().toLocaleString()}`);
+      console.log('💡 系统已切换为纯CLI模式，所有操作通过命令行完成');
+      console.log('📋 可用命令:');
+      console.log('   npm run cli          - 启动CLI界面');
+      console.log('   npm run weibo:login  - 微博二维码登录');
+      console.log('   npm run weibo:collect - 采集微博数据');
+      console.log('   npm run weibo:analyze - 分析微博数据');
+      console.log('   npm run test         - 运行系统测试');
       
       // 设置优雅关闭
       this.setupGracefulShutdown();
@@ -211,17 +212,6 @@ class PublicOpinionSystemV2 {
       await this.performanceMonitor.start();
     }
     
-    // 启动Web服务器
-    if (!options.noWeb) {
-      this.webServer = new WebServer({
-        port: parseInt(options.port),
-        host: options.host,
-        config: this.config
-      });
-      
-      await this.webServer.start();
-    }
-    
     // 启动实时监控
     if (this.realTimeMonitor) {
       await this.realTimeMonitor.start();
@@ -297,7 +287,6 @@ class PublicOpinionSystemV2 {
           platform: process.platform
         },
         services: {
-          webServer: this.webServer ? '运行中' : '未启动',
           dataCollector: this.dataCollector ? '运行中' : '未启动',
           aiAnalyzer: this.aiAnalyzer ? '运行中' : '未启动',
           realTimeMonitor: this.realTimeMonitor ? '运行中' : '未启动',
@@ -329,10 +318,6 @@ class PublicOpinionSystemV2 {
       this.isRunning = false;
       
       // 停止所有服务
-      if (this.webServer) {
-        await this.webServer.stop();
-      }
-      
       if (this.performanceMonitor) {
         await this.performanceMonitor.stop();
       }

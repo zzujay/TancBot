@@ -13,10 +13,12 @@ const logger = require('../utils/logger');
 class LLMSentimentAgent extends LLMAgent {
   constructor(config = {}) {
     super('LLMSentimentAgent', '基于大语言模型的情感分析Agent', {
-      provider: config.provider || 'openai',
-      model: config.model || 'gpt-3.5-turbo',
-      maxTokens: config.maxTokens || 1500,
-      temperature: config.temperature || 0.3,
+      provider: config.provider || process.env.LLM_PROVIDER || 'openai',
+      model: config.model || process.env.LLM_MODEL || 'gpt-3.5-turbo',
+      maxTokens: config.maxTokens || parseInt(process.env.LLM_MAX_TOKENS) || 1500,
+      temperature: config.temperature || parseFloat(process.env.LLM_TEMPERATURE) || 0.3,
+      apiKey: config.apiKey || process.env.QWEN_API_KEY || process.env.LLM_API_KEY,
+      baseURL: config.baseURL || process.env.QWEN_BASE_URL || process.env.LLM_BASE_URL,
       ...config
     });
     
@@ -395,60 +397,18 @@ class LLMSentimentAgent extends LLMAgent {
   }
 
   generateFallbackAnalysis(text) {
-    // 基于规则的情感分析作为回退方案
-    const sentiment = this.ruleBasedSentimentAnalysis(text);
-    
+    // 回退分析方案
+    logger.warn('使用回退分析方案');
     return {
-      sentiment: sentiment.sentiment,
-      score: sentiment.score,
-      confidence: sentiment.confidence * 0.6, // 降低置信度
-      emotions: sentiment.emotions,
-      aspects: sentiment.aspects,
-      keywords: sentiment.keywords,
-      explanation: '基于规则的情感分析（LLM调用失败时的回退方案）',
+      sentiment: 'neutral',
+      score: 0,
+      confidence: 0.5,
+      emotions: [],
+      aspects: [],
+      keywords: [],
+      explanation: 'LLM调用失败，使用回退分析方案',
       language: 'zh',
       culturalContext: '中文语境'
-    };
-  }
-
-  ruleBasedSentimentAnalysis(text) {
-    const positiveWords = ['好', '棒', '优秀', '喜欢', '支持', '赞', '爱', '开心', '满意', '不错', '很好', '推荐'];
-    const negativeWords = ['差', '糟糕', '讨厌', '反对', '批评', '愤怒', '失望', '难过', '痛苦', '不好', '垃圾'];
-    
-    let positiveScore = 0;
-    let negativeScore = 0;
-    
-    positiveWords.forEach(word => {
-      if (text.includes(word)) positiveScore++;
-    });
-    
-    negativeWords.forEach(word => {
-      if (text.includes(word)) negativeScore++;
-    });
-    
-    const totalWords = positiveScore + negativeScore;
-    const confidence = totalWords > 0 ? Math.min(0.8, totalWords * 0.2) : 0.3;
-    
-    let sentiment, score;
-    
-    if (positiveScore > negativeScore) {
-      sentiment = 'positive';
-      score = positiveScore / totalWords;
-    } else if (negativeScore > positiveScore) {
-      sentiment = 'negative';
-      score = -negativeScore / totalWords;
-    } else {
-      sentiment = 'neutral';
-      score = 0;
-    }
-    
-    return {
-      sentiment: sentiment,
-      score: score,
-      confidence: confidence,
-      emotions: [{ type: sentiment, intensity: Math.abs(score) }],
-      aspects: ['整体评价'],
-      keywords: positiveScore > negativeScore ? positiveWords.filter(w => text.includes(w)) : negativeWords.filter(w => text.includes(w))
     };
   }
 

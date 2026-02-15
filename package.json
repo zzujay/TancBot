@@ -1,30 +1,18 @@
 {
-  "name": "public-opinion-system",
+  "name": "tancbot",
   "version": "1.0.0",
-  "description": "微博舆情研判系统 - 专注微博数据采集与国产LLM分析",
-  "main": "src/index-simplified.js",
+  "description": "TancBot 舆情研判系统 - 微博数据采集与AI分析",
+  "main": "src/cli/tancbot.js",
   "bin": {
-    "pos": "./src/cli/index.js",
-    "weibo": "./weibo-cli.js"
+    "tancbot": "./src/cli/tancbot.js"
   },
   "scripts": {
-    "start": "node src/index-simplified.js",
-    "start:v2": "node src/index-v2.js",
-    "cli": "node src/cli/index.js",
-    "cli:v2": "node src/cli/index-v2-simple.js",
-    "dev": "nodemon src/index-simplified.js",
-    "dev:v2": "nodemon src/index-v2.js",
-    "web": "node src/index-v2.js --no-collector --no-analyzer",
-    "monitor": "node src/index-v2.js --no-web --no-collector --no-analyzer",
-    "collect": "node src/index-v2.js --no-web --no-monitor --no-analyzer",
-    "analyze": "node src/index-v2.js --no-web --no-monitor --no-collector",
-    "weibo:collect": "node weibo-cli.js collect",
-    "weibo:analyze": "node weibo-cli.js analyze",
-    "weibo:login": "node weibo-qr-login-pure.js",
-    "weibo:status": "node quick-data-test.js",
+    "start": "node src/cli/tancbot.js",
+    "cli": "node src/cli/tancbot.js",
+    "link": "npm link",
+    "unlink": "npm unlink -g tancbot",
     "test": "jest",
-    "lint": "eslint src/",
-    "typecheck": "tsc --noEmit"
+    "lint": "eslint src/"
   },
   "keywords": [
     "微博舆情",
@@ -32,18 +20,17 @@
     "国产LLM",
     "情感分析",
     "风险分析",
-    "舆情监控"
+    "舆情监控",
+    "tancbot"
   ],
-  "author": "微博舆情研判系统",
+  "author": "TancBot",
   "license": "MIT",
   "dependencies": {
     "axios": "^1.6.0",
     "chalk": "^4.1.2",
     "cheerio": "^1.0.0-rc.12",
     "commander": "^11.1.0",
-    "cors": "^2.8.6",
     "dotenv": "^16.3.1",
-    "express": "^4.22.1",
     "fs-extra": "^11.1.1",
     "inquirer": "^9.2.12",
     "natural": "^6.10.0",
@@ -53,7 +40,6 @@
     "playwright": "^1.58.2",
     "qrcode": "^1.5.4",
     "sentiment": "^5.0.2",
-    "socket.io": "^4.8.3",
     "tar": "^6.2.1",
     "uuid": "^9.0.1",
     "winston": "^3.11.0"

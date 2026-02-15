@@ -102,11 +102,8 @@ class LLMRiskAgent extends LLMAgent {
       
     } catch (error) {
       logger.error('LLM风险评估失败:', error);
-      
-      // 使用回退方案
-      const fallbackResults = await this.generateFallbackRiskAssessment(data, context);
-      Object.assign(results, fallbackResults);
-      results.confidence *= 0.5; // 大幅降低置信度
+      results.confidence = 0.5;
+      results.keyInsights = ['LLM风险评估过程中发生错误，返回默认结果'];
     }
 
     this.setConfidence(results.confidence);
@@ -444,103 +441,258 @@ ${sampleTexts}
   // 响应解析方法
   parseOverallRiskResponse(response) {
     try {
-      const parsed = JSON.parse(response);
-      return {
-        level: parsed.level || 'low',
-        score: parseFloat(parsed.score) || 0,
-        confidence: parseFloat(parsed.confidence) || 0.8,
-        urgency: parsed.urgency || 'moderate',
-        description: parsed.description || parsed.analysis || '基于LLM的风险评估'
-      };
+      // 尝试直接解析JSON
+      try {
+        const parsed = JSON.parse(response);
+        return {
+          level: parsed.level || 'low',
+          score: parseFloat(parsed.score) || 0,
+          confidence: parseFloat(parsed.confidence) || 0.8,
+          urgency: parsed.urgency || 'moderate',
+          description: parsed.description || parsed.analysis || '基于LLM的风险评估'
+        };
+      } catch (jsonError) {
+        // JSON解析失败，尝试从文本中提取信息
+        const text = response.toLowerCase();
+        
+        // 提取风险等级
+        let level = 'low';
+        if (text.includes('critical') || text.includes('严重') || text.includes('极高')) {
+          level = 'critical';
+        } else if (text.includes('high') || text.includes('高') || text.includes('严重')) {
+          level = 'high';
+        } else if (text.includes('medium') || text.includes('中等') || text.includes('中')) {
+          level = 'medium';
+        }
+        
+        // 提取评分（查找数字）
+        const scoreMatch = response.match(/(?:评分|分数|score)[:\s]*([0-9.]+)/i);
+        const score = scoreMatch ? Math.min(1, parseFloat(scoreMatch[1])) : 0.3;
+        
+        // 提取置信度
+        const confidenceMatch = response.match(/(?:置信度|confidence)[:\s]*([0-9.]+)/i);
+        const confidence = confidenceMatch ? Math.min(1, parseFloat(confidenceMatch[1])) : 0.7;
+        
+        return {
+          level: level,
+          score: score,
+          confidence: confidence,
+          urgency: level === 'critical' || level === 'high' ? 'high' : 'moderate',
+          description: response.substring(0, 500)
+        };
+      }
     } catch (error) {
-      return this.generateFallbackOverallRisk();
+      logger.warn('整体风险响应解析失败，返回默认结果');
+      return {
+        level: 'low',
+        score: 0,
+        confidence: 0.5,
+        urgency: 'moderate',
+        description: '风险评估响应解析失败'
+      };
     }
   }
 
   parseCategoryRiskResponse(response) {
     try {
-      const parsed = JSON.parse(response);
-      return parsed.categories || parsed.riskCategories || this.generateFallbackCategoryRisks();
+      // 尝试直接解析JSON
+      try {
+        const parsed = JSON.parse(response);
+        return parsed.categories || parsed.riskCategories || {};
+      } catch (jsonError) {
+        // 从文本中提取分类风险
+        const categories = {};
+        const text = response.toLowerCase();
+        
+        // 声誉风险
+        if (text.includes('声誉') || text.includes('reputation')) {
+          categories.reputation = {
+            level: text.includes('高') ? 'high' : (text.includes('低') ? 'low' : 'medium'),
+            score: 0.3,
+            description: '声誉风险分析'
+          };
+        }
+        
+        // 运营风险
+        if (text.includes('运营') || text.includes('operation')) {
+          categories.operation = {
+            level: text.includes('高') ? 'high' : (text.includes('低') ? 'low' : 'medium'),
+            score: 0.3,
+            description: '运营风险分析'
+          };
+        }
+        
+        return categories;
+      }
     } catch (error) {
-      return this.generateFallbackCategoryRisks();
+      logger.warn('分类风险响应解析失败，返回空结果');
+      return {};
     }
   }
 
   parseRiskFactorsResponse(response) {
     try {
-      const parsed = JSON.parse(response);
-      return parsed.factors || parsed.riskFactors || [];
+      // 尝试直接解析JSON
+      try {
+        const parsed = JSON.parse(response);
+        return parsed.factors || parsed.riskFactors || [];
+      } catch (jsonError) {
+        // 从文本中提取风险因素
+        const factors = [];
+        const lines = response.split(/[。\n]/);
+        
+        lines.forEach(line => {
+          const trimmed = line.trim();
+          if (trimmed.length > 5 && trimmed.length < 100) {
+            factors.push({
+              name: trimmed.substring(0, 50),
+              description: trimmed,
+              severity: 'medium'
+            });
+          }
+        });
+        
+        return factors.slice(0, 5);
+      }
     } catch (error) {
+      logger.warn('风险因素响应解析失败，返回空结果');
       return [];
     }
   }
 
   parseRiskTrendsResponse(response) {
     try {
-      const parsed = JSON.parse(response);
-      return {
-        direction: parsed.direction || 'stable',
-        velocity: parsed.velocity || 'slow',
-        acceleration: parseFloat(parsed.acceleration) || 0,
-        ...parsed
-      };
+      // 尝试直接解析JSON
+      try {
+        const parsed = JSON.parse(response);
+        return {
+          direction: parsed.direction || 'stable',
+          velocity: parsed.velocity || 'slow',
+          acceleration: parseFloat(parsed.acceleration) || 0,
+          ...parsed
+        };
+      } catch (jsonError) {
+        // 从文本中提取趋势信息
+        const text = response.toLowerCase();
+        let direction = 'stable';
+        let velocity = 'slow';
+        
+        if (text.includes('恶化') || text.includes('worsening') || text.includes('上升')) {
+          direction = 'worsening';
+        } else if (text.includes('改善') || text.includes('improving') || text.includes('下降')) {
+          direction = 'improving';
+        }
+        
+        if (text.includes('快') || text.includes('fast') || text.includes('加速')) {
+          velocity = 'fast';
+        } else if (text.includes('中等') || text.includes('moderate')) {
+          velocity = 'moderate';
+        }
+        
+        return {
+          direction: direction,
+          velocity: velocity,
+          acceleration: 0,
+          description: response.substring(0, 300)
+        };
+      }
     } catch (error) {
+      logger.warn('风险趋势响应解析失败，返回默认结果');
       return { direction: 'stable', velocity: 'slow', acceleration: 0 };
     }
   }
 
   parseRiskHotspotsResponse(response) {
     try {
-      const parsed = JSON.parse(response);
-      return parsed.hotspots || parsed.riskHotspots || [];
+      // 尝试直接解析JSON
+      try {
+        const parsed = JSON.parse(response);
+        return parsed.hotspots || parsed.riskHotspots || [];
+      } catch (jsonError) {
+        // 从文本中提取热点
+        const hotspots = [];
+        const lines = response.split(/[。\n]/);
+        
+        lines.forEach(line => {
+          const trimmed = line.trim();
+          if (trimmed.length > 5 && trimmed.length < 100) {
+            hotspots.push({
+              topic: trimmed.substring(0, 30),
+              intensity: 0.5,
+              description: trimmed
+            });
+          }
+        });
+        
+        return hotspots.slice(0, 3);
+      }
     } catch (error) {
+      logger.warn('风险热点响应解析失败，返回空结果');
       return [];
     }
   }
 
   parseEarlyWarningsResponse(response) {
     try {
-      const parsed = JSON.parse(response);
-      return parsed.warnings || parsed.earlyWarnings || [];
+      // 尝试直接解析JSON
+      try {
+        const parsed = JSON.parse(response);
+        return parsed.warnings || parsed.earlyWarnings || [];
+      } catch (jsonError) {
+        // 从文本中提取预警
+        const warnings = [];
+        const lines = response.split(/[。\n]/);
+        
+        lines.forEach(line => {
+          const trimmed = line.trim();
+          if (trimmed.length > 5 && trimmed.length < 100) {
+            warnings.push({
+              type: 'general',
+              message: trimmed,
+              severity: 'medium'
+            });
+          }
+        });
+        
+        return warnings.slice(0, 3);
+      }
     } catch (error) {
+      logger.warn('早期预警响应解析失败，返回空结果');
       return [];
     }
   }
 
   parseRecommendationsResponse(response) {
     try {
-      const parsed = JSON.parse(response);
-      return parsed.recommendations || parsed.recommendations || [];
+      // 尝试直接解析JSON
+      try {
+        const parsed = JSON.parse(response);
+        return parsed.recommendations || [];
+      } catch (jsonError) {
+        // 从文本中提取建议
+        const recommendations = [];
+        const lines = response.split(/[。\n]/);
+        
+        lines.forEach(line => {
+          const trimmed = line.trim();
+          if (trimmed.length > 5 && trimmed.length < 100) {
+            recommendations.push(trimmed);
+          }
+        });
+        
+        return recommendations.slice(0, 5);
+      }
     } catch (error) {
+      logger.warn('建议响应解析失败，返回空结果');
       return [];
     }
-  }
-
-  generateFallbackOverallRisk() {
-    return {
-      level: 'low',
-      score: 0.2,
-      confidence: 0.6,
-      urgency: 'moderate',
-      description: '基于规则的风险评估（LLM调用失败时的回退方案）'
-    };
-  }
-
-  generateFallbackCategoryRisks() {
-    return {
-      reputation: { level: 'low', score: 0.1, confidence: 0.6, description: '声誉风险较低' },
-      operational: { level: 'low', score: 0.15, confidence: 0.6, description: '运营风险较低' },
-      financial: { level: 'low', score: 0.05, confidence: 0.6, description: '财务风险较低' },
-      legal: { level: 'low', score: 0.08, confidence: 0.6, description: '法律风险较低' },
-      strategic: { level: 'low', score: 0.12, confidence: 0.6, description: '战略风险较低' }
-    };
   }
 
   calculateOverallConfidence(results) {
     const confidences = [
       results.overallRisk.confidence,
-      ...Object.values(results.riskCategories).map(cat => cat.confidence),
-      0.8 // 基础置信度
+      ...Object.values(results.riskCategories).map(cat => cat.confidence || 0.5),
+      0.5 // 基础置信度
     ];
     
     return confidences.reduce((sum, conf) => sum + conf, 0) / confidences.length;

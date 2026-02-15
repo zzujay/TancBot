@@ -6,6 +6,7 @@
 const { program } = require('commander');
 const chalk = require('chalk');
 const ora = require('ora');
+const path = require('path');
 
 // 导入核心模块
 const ConfigManager = require('../utils/config-manager');
@@ -40,7 +41,7 @@ class PublicOpinionSystemV2CLI {
       .description('基于AI的多智能体舆情分析与研判系统 - 纯命令行版本')
       .version('2.0.0')
       .option('-c, --config <path>', '配置文件路径', 'config/system.json')
-      .option('-d, --debug', '调试模式')
+      .option('--debug', '调试模式')  // 移除短选项-d，避免与子命令冲突
       .option('--no-monitor', '禁用实时监控')
       .option('--no-collector', '禁用数据收集')
       .option('--no-analyzer', '禁用AI分析')
@@ -59,6 +60,18 @@ class PublicOpinionSystemV2CLI {
       .option('--show-timeline', '显示数据时间线')
       .action(async (options) => {
         await this.performAnalysis(options);
+      });
+      
+    // 舆情事件分析命令
+    program
+      .command('event')
+      .description('分析舆情事件')
+      .option('-d, --description <description>', '舆情事件详细叙述')
+      .option('-m, --max-results <number>', '最大结果数', '50')
+      .option('--show-timeline', '显示数据时间线')
+      .option('--login', '强制登录微博')
+      .action(async (options) => {
+        await this.analyzeEvent(options);
       });
       
     // 数据收集命令
@@ -273,26 +286,32 @@ class PublicOpinionSystemV2CLI {
   }
   
   async initializeModules(options) {
+    console.log(chalk.blue('开始初始化功能模块...'));
+    
     // 初始化数据收集器
     if (!options.noCollector) {
+      console.log(chalk.cyan('初始化数据收集器...'));
       this.dataCollector = new RealDataCollectorV2();
       console.log(chalk.green('✅ 数据收集器初始化完成'));
     }
     
     // 初始化AI分析器
     if (!options.noAnalyzer) {
+      console.log(chalk.cyan('初始化AI分析器...'));
       this.aiAnalyzer = new EnhancedAIAnalyzer();
       await this.aiAnalyzer.initialize();
       console.log(chalk.green('✅ AI分析器初始化完成'));
     }
     
     // 初始化技能管理器
+    console.log(chalk.cyan('初始化技能管理器...'));
     this.skillManager = new SkillManager();
     await this.skillManager.start();
     console.log(chalk.green('✅ 技能管理器初始化完成'));
     
     // 初始化实时监控器
     if (!options.noMonitor) {
+      console.log(chalk.cyan('初始化实时监控器...'));
       this.realTimeMonitor = new RealTimeMonitor();
       console.log(chalk.green('✅ 实时监控器初始化完成'));
     }
@@ -301,7 +320,7 @@ class PublicOpinionSystemV2CLI {
   }
   
   async performAnalysis(options) {
-    const spinner = ora('正在初始化系统...').start();
+    let spinner = ora('正在初始化系统...').start();
     
     try {
       // 确保系统已初始化
@@ -349,13 +368,16 @@ class PublicOpinionSystemV2CLI {
       spinner.fail('分析失败');
       console.error(chalk.red('错误详情:'), error.message);
       this.logger.error('舆情分析失败:', error);
+    } finally {
+      // 不清理资源以保持微博登录状态
+      // await this.cleanup();
     }
   }
   
 
   
   async collectData(options) {
-    const spinner = ora('正在初始化系统...').start();
+    let spinner = ora('正在初始化系统...').start();
     
     try {
       // 确保数据收集器已初始化
@@ -395,7 +417,7 @@ class PublicOpinionSystemV2CLI {
   }
   
   async showTimelineData(options) {
-    const spinner = ora('正在初始化系统...').start();
+    let spinner = ora('正在初始化系统...').start();
     
     try {
       // 确保数据收集器已初始化
@@ -644,7 +666,7 @@ class PublicOpinionSystemV2CLI {
   }
   
   async runBenchmark(options) {
-    const spinner = ora('正在初始化系统...').start();
+    let spinner = ora('正在初始化系统...').start();
     
     try {
       // 确保必要的模块已初始化
@@ -715,6 +737,233 @@ class PublicOpinionSystemV2CLI {
       this.logger.error('基准测试失败:', error);
     }
   }
+  
+  async analyzeEvent(options) {
+    console.log(chalk.blue.bold('\n🚀 舆情事件分析'));
+    console.log('=' .repeat(60));
+    
+    // 调试输出
+    console.log(chalk.gray('调试信息 - 接收到的选项:'), JSON.stringify(options, null, 2));
+    
+    let spinner = ora('正在初始化系统...').start();
+    
+    try {
+      // 确保系统已初始化
+      await this.initializeModules({});
+      
+      // 系统初始化完成，停止 spinner
+      spinner.succeed('系统初始化完成！');
+      
+      // 获取舆情事件叙述
+      let eventDescription = options.description;
+      if (!eventDescription) {
+        // 交互模式获取事件叙述
+        const readline = require('readline');
+        const rl = readline.createInterface({ 
+          input: process.stdin, 
+          output: process.stdout,
+          terminal: true // 确保输入显示
+        });
+        
+        const askQuestion = (question) => {
+          return new Promise((resolve) => {
+            rl.question(question, (answer) => {
+              resolve(answer.trim());
+            });
+          });
+        };
+        
+        console.log('\n请详细描述舆情事件（按Enter键完成）:');
+        console.log('例如: 某公司产品出现质量问题，用户在微博上大量投诉，引起广泛关注');
+        console.log('-' .repeat(60));
+        
+        // 确保spinner停止，避免输入显示问题
+        if (spinner) {
+          spinner.stop();
+        }
+        
+        eventDescription = await askQuestion('\n事件叙述: ');
+        rl.close();
+        
+        if (!eventDescription) {
+          throw new Error('事件叙述不能为空');
+        }
+      }
+      
+      console.log('\n📝 事件叙述:');
+      console.log(chalk.cyan(eventDescription));
+      console.log('');
+      
+      // 从事件叙述中提取关键词
+      spinner = ora('正在从事件叙述中提取关键词...').start();
+      const keywords = this.extractKeywordsFromDescription(eventDescription);
+      spinner.succeed('关键词提取完成');
+      
+      console.log('🔍 提取的关键词:');
+      console.log(chalk.green(keywords.join(', ')));
+      console.log('');
+      
+      // 登录微博（如果需要）- Playwright会自动处理
+      if (options.login) {
+        spinner = ora('正在准备微博登录...').start();
+        spinner.succeed('微博登录将在数据收集时自动进行');
+        console.log(chalk.blue('💡 提示：首次使用需要扫码登录微博，后续将自动复用登录状态'));
+      }
+      
+      // 数据收集（只从微博平台，使用Playwright）
+      spinner = ora('正在从微博收集相关信息...').start();
+      const maxResults = parseInt(options.maxResults) || 50;
+      console.log(chalk.blue(`\n🔍 开始从微博搜索关键词: ${keywords.join(', ')}`));
+      
+      let collectedData;
+      
+      try {
+        collectedData = await this.dataCollector.collectData(keywords, ['social'], maxResults);
+        
+        if (collectedData.length === 0) {
+          spinner.warn('未收集到相关微博数据');
+          console.log(chalk.yellow('⚠️  可能原因：关键词过于冷门、网络问题或微博搜索限制'));
+          console.log(chalk.yellow('💡 建议：尝试使用更热门的关键词或调整搜索时间范围'));
+          // 不抛出错误，继续后续流程
+        } else {
+          spinner.succeed(`成功从微博收集到 ${collectedData.length} 条相关数据`);
+        }
+      } catch (collectError) {
+        spinner.fail('微博数据收集失败');
+        console.log(chalk.red(`收集错误: ${collectError.message}`));
+        
+        if (collectError.message.includes('登录') || collectError.message.includes('扫码')) {
+          console.log(chalk.yellow('💡 提示：请确保成功扫码登录微博'));
+        }
+        
+        throw new Error(`微博数据收集失败: ${collectError.message}`);
+      }
+      
+      // 按时间线排序和存储
+      spinner.text = '正在按时间线整理数据...';
+      const timelineData = this.sortDataByTimeline(collectedData);
+      const timelineFilePath = this.saveTimelineData(timelineData, keywords);
+      console.log(chalk.cyan(`📅 时间线数据已保存到: ${timelineFilePath}`));
+      
+      // 显示时间线（如果请求）
+      if (options.showTimeline) {
+        console.log(chalk.cyan('\n📊 事件时间线预览'));
+        this.displayDetailedTimeline(timelineData, keywords, ['social']);
+      }
+      
+      // AI分析
+      spinner.text = '正在使用LLM多Agent进行分析...';
+      let analysisResult;
+      
+      try {
+        analysisResult = await this.aiAnalyzer.analyze(timelineData, keywords, { analysisType: 'comprehensive' });
+        spinner.succeed('AI分析完成！');
+      } catch (analysisError) {
+        spinner.fail('AI分析失败');
+        console.log(chalk.red(`分析错误: ${analysisError.message}`));
+        throw new Error(`AI分析失败: ${analysisError.message}`);
+      }
+      
+      // 生成研判报告
+      console.log(chalk.green.bold('\n📋 舆情事件研判报告'));
+      console.log('=' .repeat(60));
+      this.displayAnalysisResults(analysisResult);
+      
+      // 保存分析结果
+      const analysisFilePath = this.saveAnalysisResult(analysisResult, keywords);
+      console.log(chalk.cyan(`\n📄 分析报告已保存到: ${analysisFilePath}`));
+      
+    } catch (error) {
+      spinner.fail('事件分析失败');
+      console.error(chalk.red('错误详情:'), error.message);
+      this.logger.error('事件分析失败:', error);
+    }
+  }
+  
+  extractKeywordsFromDescription(description) {
+    // 简单的关键词提取逻辑
+    // 实际应用中可以使用NLP库进行更准确的提取
+    const stopWords = ['的', '了', '在', '是', '我', '有', '和', '就', '不', '人', '都', '一', '一个', '上', '也', '很', '到', '说', '要', '去', '你', '会', '着', '没有', '看', '好', '自己', '这'];
+    
+    // 分词并过滤停用词
+    const words = description
+      .split(/[^\u4e00-\u9fa5a-zA-Z0-9]+/)
+      .filter(word => word.length > 1 && !stopWords.includes(word));
+    
+    // 去重并取前10个关键词
+    const uniqueWords = [...new Set(words)];
+    return uniqueWords.slice(0, 10);
+  }
+  
+  async loginWeibo() {
+    // 使用playwright-weibo-qr-login.js进行登录
+    const WeiboPlaywrightQRLogin = require('../../playwright-weibo-qr-login');
+    const login = new WeiboPlaywrightQRLogin({ headless: true });
+    
+    try {
+      const result = await login.start();
+      return result.success;
+    } catch (error) {
+      console.error('微博登录失败:', error.message);
+      throw error;
+    }
+  }
+  
+  sortDataByTimeline(data) {
+    // 按发布时间排序
+    return [...data].sort((a, b) => {
+      const timeA = new Date(a.publish_time || a.collection_time || Date.now());
+      const timeB = new Date(b.publish_time || b.collection_time || Date.now());
+      return timeA - timeB; // 时间线顺序（从早到晚）
+    });
+  }
+  
+  saveTimelineData(data, keywords) {
+    const fs = require('fs-extra');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const fileName = `timeline-${keywords.join('-')}-${timestamp}.json`;
+    const filePath = path.join('data', fileName);
+    
+    // 确保目录存在
+    fs.ensureDirSync('data');
+    
+    // 保存数据
+    fs.writeJSONSync(filePath, data, { spaces: 2 });
+    
+    return filePath;
+  }
+  
+  saveAnalysisResult(result, keywords) {
+    const fs = require('fs-extra');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const fileName = `analysis-${keywords.join('-')}-${timestamp}.json`;
+    const filePath = path.join('data', fileName);
+    
+    // 确保目录存在
+    fs.ensureDirSync('data');
+    
+    // 保存数据
+    fs.writeJSONSync(filePath, result, { spaces: 2 });
+    
+    return filePath;
+  }
+
+  /**
+   * 清理资源（保持Playwright登录状态）
+   */
+  async cleanup() {
+    try {
+      // 保持微博登录状态，不关闭浏览器
+      if (this.dataCollector && this.dataCollector.collectors && this.dataCollector.collectors.social) {
+        logger.info('保持微博登录状态，不关闭浏览器');
+        // await this.dataCollector.collectors.social.close(); // 不关闭以保持登录状态
+      }
+    } catch (error) {
+      logger.error('清理资源时出错:', error.message);
+    }
+  }
+  
+  // 演示数据和基础分析功能已移除 - 系统要求使用真实LLM API和真实数据
   
   // 结果显示方法
   displayAnalysisResults(result) {
