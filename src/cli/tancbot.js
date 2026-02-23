@@ -271,7 +271,10 @@ class TancBotCLI {
       console.log(chalk.gray('-'.repeat(40)));
       if (result.emotion.emotionAnalysis) {
         const emotion = result.emotion.emotionAnalysis;
-        console.log(`   主导情绪: ${this.translateEmotion(emotion.dominantEmotion)} (${emotion.distribution?.[emotion.dominantEmotion]?.percentage || 0}%)`);
+        const distribution = emotion.emotionDistribution || emotion.distribution || {};
+        const dominantEmotionData = distribution[emotion.dominantEmotion] || {};
+        const percentage = dominantEmotionData.percentage || 0;
+        console.log(`   主导情绪: ${this.translateEmotion(emotion.dominantEmotion)} (${percentage}%)`);
         console.log(`   主要立场: ${this.translateStance(result.emotion.stanceAnalysis?.dominantStance)}`);
       }
     }
@@ -304,7 +307,17 @@ class TancBotCLI {
       }
       if (result.risk.trendPrediction) {
         console.log(`   发展趋势: ${result.risk.trendPrediction.trendDescription}`);
-        console.log(`   发展预测: ${result.risk.trendPrediction.prediction}`);
+        // 处理发展预测 - predictedDevelopments 是数组
+        const predictions = result.risk.trendPrediction.predictedDevelopments;
+        if (predictions && predictions.length > 0) {
+          const predictionText = predictions.map(p => `${p.timeframe}: ${p.prediction} (${p.probability})`).join('; ');
+          console.log(`   发展预测: ${predictionText}`);
+        } else if (result.risk.trendPrediction.prediction) {
+          // 兼容直接返回 prediction 字段的情况
+          console.log(`   发展预测: ${result.risk.trendPrediction.prediction}`);
+        } else {
+          console.log(`   发展预测: 暂无具体预测`);
+        }
       }
     }
     

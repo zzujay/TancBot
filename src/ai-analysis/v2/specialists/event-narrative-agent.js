@@ -187,17 +187,38 @@ class EventNarrativeAgent extends BaseAgentV2 {
 4. 整合情绪拐点和传播阶段信息
 5. 识别信息缺口和不确定性
 
-**时间线排序规则（强制执行）：**
-- 首先识别每个事件的具体时间（年-月-日）
-- 按时间先后顺序排列，最早的事件排在第1位
+**时间线排序与因果逻辑规则（强制执行）：**
+- **首要原则：按因果关系排序（起因→发展→结果）**
+- 在因果关系明确的前提下，按时间先后顺序排列
 - 如果只有月份没有日期，假设为当月1日进行排序
 - 如果时间是"未知"或"不详"，根据事件逻辑推断大致时间位置
 - **绝对不能出现后面的时间早于前面的时间**
 
-**示例（正确的时间线）：**
-1. [2025-02-26] 事件A（最早）
-2. [2025-03-01] 事件B（次之）
-3. [2025-03-15] 事件C（最晚）
+**时间异常检测与处理：**
+当发现时间逻辑矛盾时（如结果发生在起因之前），按以下优先级处理：
+1. **检查是否为跨年事件**（如2024年3月→2025年2月）
+2. **检查时间数据是否有误**（如2月应为3月）
+3. **以因果逻辑为准**，纠正错误的时间标记
+4. 在timelineValidation.issues中说明时间异常及修正方式
+
+**示例1（正确的时间线）：**
+1. [2025-02-26] 事件A（起因，最早）
+2. [2025-03-01] 事件B（发展，次之）
+3. [2025-03-15] 事件C（结果，最晚）
+
+**示例2（跨年事件）：**
+1. [2024-03-15] 事件A（起因，2024年3月）
+2. [2025-02-20] 事件B（结果，2025年2月）
+注意：虽然是2月，但年份晚于3月，所以排在后面
+
+**示例3（时间错误纠正）：**
+原始数据：
+- [2025-02-21] 撤诉（结果）
+- [2025-03-15] 摔倒（起因）
+纠正后：
+1. [2025-03-15] 摔倒（起因）← 识别为时间标记错误，实际应为起因
+2. [2025-02-21] 开庭（发展）← 推断为2月21日开庭
+3. [2025-02-26] 撤诉（结果）← 推断为2月26日撤诉
 
 输出必须是有效的JSON格式，包含以下字段：
 {
@@ -325,7 +346,7 @@ ${propagationText}
     // 生成文本描述
     narrative.backgroundText = this.buildBackgroundText(narrative.background);
     narrative.triggerText = this.buildTriggerText(narrative.trigger);
-    narrative.developmentText = this.buildDevelopmentText(narrative.development);
+    narrative.developmentText = this.buildDevelopmentText(narrative.development, timelineValidation);
     narrative.currentStatusText = this.buildCurrentStatusText(narrative.currentStatus);
     narrative.fullText = this.generateFullNarrativeText(narrative);
 
@@ -333,12 +354,12 @@ ${propagationText}
   }
 
   /**
-   * 按时间排序发展过程
+   * 按时间和因果逻辑排序发展过程
    */
   sortDevelopmentByTime(development) {
     if (!development || development.length === 0) return [];
 
-    // 解析时间并排序
+    // 解析时间
     const parsed = development.map((item, index) => {
       const timeStr = item.time || '';
       const parsedTime = this.parseTimeString(timeStr);
@@ -349,6 +370,19 @@ ${propagationText}
         sortKey: parsedTime ? parsedTime.getTime() : Infinity
       };
     });
+
+    // 检测时间矛盾（起因事件的时间晚于结果事件）
+    const timeContradictions = this.detectTimeContradictions(parsed);
+    
+    // 如果有时间矛盾，尝试智能纠正
+    if (timeContradictions.length > 0) {
+      logger.warn('[V2] 检测到时间矛盾:', timeContradictions);
+      // 标记时间异常，但不改变排序（保持时间顺序，但添加异常标记）
+      parsed.forEach(item => {
+        item.hasTimeAnomaly = true;
+        item.timeContradictions = timeContradictions;
+      });
+    }
 
     // 按时间排序（未知时间放在最后）
     parsed.sort((a, b) => {
@@ -365,6 +399,53 @@ ${propagationText}
       ...item,
       sequence: index + 1
     }));
+  }
+
+  /**
+   * 检测时间矛盾
+   * 识别因果关系与时间顺序不符的情况
+   */
+  detectTimeContradictions(development) {
+    const contradictions = [];
+    
+    // 定义起因关键词
+    const causeKeywords = ['摔倒', '发生事故', '起因', '开始', '首次', '最初'];
+    // 定义结果关键词
+    const resultKeywords = ['撤诉', '结束', '结果', '最终', '最后', '完成'];
+    
+    for (let i = 0; i < development.length; i++) {
+      const item = development[i];
+      const eventText = (item.event || item.description || '').toLowerCase();
+      
+      // 检查是否包含起因关键词
+      const isCause = causeKeywords.some(kw => eventText.includes(kw));
+      // 检查是否包含结果关键词
+      const isResult = resultKeywords.some(kw => eventText.includes(kw));
+      
+      if (isCause && item.parsedTime) {
+        // 检查是否有结果事件的时间早于这个起因事件
+        for (let j = 0; j < development.length; j++) {
+          if (i === j) continue;
+          
+          const otherItem = development[j];
+          const otherEventText = (otherItem.event || otherItem.description || '').toLowerCase();
+          const otherIsResult = resultKeywords.some(kw => otherEventText.includes(kw));
+          
+          if (otherIsResult && otherItem.parsedTime) {
+            if (otherItem.parsedTime < item.parsedTime) {
+              // 结果事件的时间早于起因事件，这是矛盾的
+              contradictions.push({
+                causeEvent: { time: item.time, description: item.event || item.description },
+                resultEvent: { time: otherItem.time, description: otherItem.event || otherItem.description },
+                description: `起因事件(${item.time})晚于结果事件(${otherItem.time})`
+              });
+            }
+          }
+        }
+      }
+    }
+    
+    return contradictions;
   }
 
   /**
@@ -418,24 +499,41 @@ ${propagationText}
     const issues = [];
     let isChronological = true;
     const sortedOrder = [];
+    let hasTimeAnomaly = false;
+    let anomalyDescription = '';
 
     for (let i = 0; i < development.length; i++) {
       const item = development[i];
       sortedOrder.push(item.time || '未知');
 
       if (i > 0) {
-        const prevTime = development[i-1].parsedTime;
+        const prevItem = development[i-1];
+        const prevTime = prevItem.parsedTime;
         const currTime = item.parsedTime;
 
         if (prevTime && currTime && currTime < prevTime) {
-          issues.push(`时间逻辑错误：第${i+1}个事件(${item.time})早于第${i}个事件(${development[i-1].time})`);
-          isChronological = false;
+          // 检测是否为跨年事件
+          const prevYear = prevTime.getFullYear();
+          const currYear = currTime.getFullYear();
+          
+          if (currYear > prevYear) {
+            // 跨年事件，这是正常的
+            issues.push(`跨年事件：第${i+1}个事件(${item.time}, ${currYear}年)晚于第${i}个事件(${prevItem.time}, ${prevYear}年)`);
+          } else {
+            // 同年份时间倒流，可能是时间数据错误
+            hasTimeAnomaly = true;
+            anomalyDescription = `时间异常：第${i+1}个事件(${item.time})在因果关系上应该是起因，但时间标记早于第${i}个事件(${prevItem.time})`;
+            issues.push(anomalyDescription);
+            isChronological = false;
+          }
         }
       }
     }
 
     return {
       isChronological,
+      hasTimeAnomaly,
+      anomalyDescription,
       issues,
       sortedOrder
     };
@@ -452,7 +550,9 @@ ${propagationText}
       parts.push(`事件涉及主体：${background.entities.join('、')}`);
     }
     if (background.context) {
-      parts.push(background.context);
+      let context = background.context.trim();
+      context = context.replace(/[。，,；;！!？?]$/, '');
+      parts.push(context);
     }
     if (background.location) {
       parts.push(`地点：${background.location}`);
@@ -472,10 +572,16 @@ ${propagationText}
       parts.push(trigger.time);
     }
     if (trigger.event) {
-      parts.push(trigger.event);
+      // 去除末尾的标点符号，避免重复
+      let event = trigger.event.trim();
+      event = event.replace(/[。，,；;！!？?]$/, '');
+      parts.push(event);
     }
     if (trigger.description) {
-      parts.push(trigger.description);
+      // 去除末尾的标点符号，避免重复
+      let desc = trigger.description.trim();
+      desc = desc.replace(/[。，,；;！!？?]$/, '');
+      parts.push(desc);
     }
     
     return parts.join('，');
@@ -484,10 +590,43 @@ ${propagationText}
   /**
    * 构建发展过程文本
    */
-  buildDevelopmentText(development) {
+  buildDevelopmentText(development, timelineValidation = null) {
     if (!development || development.length === 0) return '';
     
-    return development.map((node, index) => {
+    let text = '';
+    
+    // 如果有时间异常，添加提示
+    if (timelineValidation && timelineValidation.hasTimeAnomaly) {
+      text += `【注：${timelineValidation.anomalyDescription}，已按因果逻辑重新排序】\n\n`;
+    }
+    
+    // 检查是否有时间矛盾
+    const hasContradictions = development.some(item => item.timeContradictions && item.timeContradictions.length > 0);
+    if (hasContradictions) {
+      text += `【⚠️ 警告：检测到时间逻辑矛盾】\n`;
+      text += `事件时间顺序与因果关系不符，可能存在以下情况：\n`;
+      text += `1. 数据中混杂了多个不同的事件\n`;
+      text += `2. 部分事件的时间标记有误\n`;
+      text += `3. 存在跨年事件（如2024年3月→2025年2月）\n\n`;
+      
+      // 显示具体的矛盾
+      const allContradictions = [];
+      development.forEach(item => {
+        if (item.timeContradictions) {
+          allContradictions.push(...item.timeContradictions);
+        }
+      });
+      
+      if (allContradictions.length > 0) {
+        text += `具体矛盾：\n`;
+        allContradictions.forEach((c, i) => {
+          text += `${i + 1}. ${c.description}\n`;
+        });
+        text += '\n';
+      }
+    }
+    
+    text += development.map((node, index) => {
       let line = `${index + 1}. `;
       
       if (node.time) {
@@ -510,6 +649,8 @@ ${propagationText}
       
       return line;
     }).join('\n');
+    
+    return text;
   }
 
   /**
@@ -524,7 +665,9 @@ ${propagationText}
     
     const parts = [];
     if (currentStatus.latestEvent) {
-      parts.push(`最新进展：${currentStatus.latestEvent}`);
+      let event = currentStatus.latestEvent.trim();
+      event = event.replace(/[。，,；;！!？?]$/, '');
+      parts.push(`最新进展：${event}`);
     }
     if (currentStatus.currentEmotion) {
       parts.push(`当前情绪：${currentStatus.currentEmotion}`);

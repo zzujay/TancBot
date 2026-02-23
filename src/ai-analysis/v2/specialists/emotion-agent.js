@@ -1,6 +1,6 @@
 /**
  * 情绪/态度分析智能体 (Emotion Agent)
- * 聚焦"主观倾向"，分析微博内容中不同主体的情绪、态度和立场
+ * 基于LLM的情绪分析，分析微博内容中不同主体的情绪、态度和立场
  */
 
 const BaseAgentV2 = require('../base-agent-v2');
@@ -10,23 +10,19 @@ class EmotionAgent extends BaseAgentV2 {
   constructor() {
     super(
       '情绪态度分析智能体',
-      '聚焦主观倾向，分析情绪类型、立场倾向、情绪演变',
+      '基于LLM分析情绪类型、立场倾向、情绪演变',
       'analyzer'
     );
-    this.emotionKeywords = {
-      angry: ['愤怒', '生气', '恼火', '气愤', '暴怒', '火大', '怒', '恨', '讨厌'],
-      anxious: ['焦虑', '担心', '害怕', '恐惧', '紧张', '不安', '慌', '愁'],
-      sympathetic: ['同情', '心疼', '难过', '悲伤', '感动', '支持', '理解'],
-      positive: ['开心', '高兴', '满意', '赞', '好', '棒', '优秀', '支持'],
-      negative: ['失望', '不满', '质疑', '反对', '批评', '吐槽', '抱怨'],
-      neutral: ['关注', '观望', '了解', '知道', '看到']
-    };
-    this.stanceKeywords = {
-      support: ['支持', '赞同', '同意', '认可', '站在', '力挺'],
-      oppose: ['反对', '抵制', '抗议', '谴责', '批评', '质疑'],
-      question: ['疑问', '质疑', '不解', '困惑', '为什么', '怎么回事'],
-      neutral: ['中立', '客观', '理性', '观望']
-    };
+    this.llmClient = null;
+  }
+
+  async initialize() {
+    const LLMClient = require('../../../services/llm-client');
+    this.llmClient = LLMClient;
+    // 确保LLMClient已初始化
+    if (!this.llmClient.client) {
+      await this.llmClient.initialize();
+    }
   }
 
   async process(data, context = {}) {
@@ -34,14 +30,18 @@ class EmotionAgent extends BaseAgentV2 {
     this.updateLastUsed();
 
     try {
-      // 1. 识别情绪类型和强度
-      const emotionAnalysis = this.analyzeEmotions(data);
+      if (!this.llmClient) {
+        await this.initialize();
+      }
 
-      // 2. 分析立场倾向
-      const stanceAnalysis = this.analyzeStance(data);
+      // 1. 使用LLM分析情绪类型和强度
+      const emotionAnalysis = await this.analyzeEmotionsWithLLM(data);
 
-      // 3. 追踪情绪演变
-      const emotionEvolution = this.trackEmotionEvolution(data, emotionAnalysis);
+      // 2. 使用LLM分析立场倾向
+      const stanceAnalysis = await this.analyzeStanceWithLLM(data);
+
+      // 3. 使用LLM追踪情绪演变
+      const emotionEvolution = await this.trackEmotionEvolutionWithLLM(data);
 
       // 4. 识别关键情绪拐点
       const turningPoints = this.identifyTurningPoints(emotionEvolution);
@@ -72,225 +72,249 @@ class EmotionAgent extends BaseAgentV2 {
   }
 
   /**
-   * 分析情绪类型和强度
+   * 使用LLM分析情绪类型和强度
    */
-  analyzeEmotions(data) {
-    const emotions = {
-      angry: { count: 0, intensity: 0, examples: [] },
-      anxious: { count: 0, intensity: 0, examples: [] },
-      sympathetic: { count: 0, intensity: 0, examples: [] },
-      positive: { count: 0, intensity: 0, examples: [] },
-      negative: { count: 0, intensity: 0, examples: [] },
-      neutral: { count: 0, intensity: 0, examples: [] }
-    };
+  async analyzeEmotionsWithLLM(data) {
+    // 准备数据摘要（限制token数量）
+    const dataSummary = data.map((item, idx) => ({
+      index: idx,
+      content: (item.content || item.text || '').substring(0, 200),
+      time: item.createdAt || item.time
+    })).slice(0, 20); // 最多分析20条
 
-    data.forEach((item, index) => {
-      const content = item.content || item.text || '';
-      
-      // 分析每种情绪
-      for (const [emotionType, keywords] of Object.entries(this.emotionKeywords)) {
-        let matched = false;
-        let intensity = 0;
-        
-        keywords.forEach(keyword => {
-          if (content.includes(keyword)) {
-            matched = true;
-            // 计算强度（根据关键词出现次数和修饰词）
-            const matches = content.match(new RegExp(keyword, 'g'));
-            intensity += matches ? matches.length : 1;
-            
-            // 检查强度修饰词
-            if (content.includes('非常') || content.includes('特别') || content.includes('很')) {
-              intensity += 1;
-            }
-            if (content.includes('极度') || content.includes('超级') || content.includes('太')) {
-              intensity += 2;
-            }
-          }
-        });
+    const prompt = `你是一个专业的情绪分析专家。请分析以下社交媒体内容的情绪特征。
 
-        if (matched) {
-          emotions[emotionType].count++;
-          emotions[emotionType].intensity += intensity;
-          
-          // 保存示例（限制数量）
-          if (emotions[emotionType].examples.length < 3) {
-            emotions[emotionType].examples.push({
-              index,
-              content: content.substring(0, 100),
-              intensity
-            });
-          }
-        }
-      }
-    });
+数据：
+${JSON.stringify(dataSummary, null, 2)}
 
-    // 计算整体情绪分布
-    const total = data.length;
-    const distribution = {};
-    
-    for (const [type, data] of Object.entries(emotions)) {
-      distribution[type] = {
-        count: data.count,
-        percentage: total > 0 ? (data.count / total * 100).toFixed(1) : 0,
-        avgIntensity: data.count > 0 ? (data.intensity / data.count).toFixed(2) : 0
-      };
-    }
+请输出JSON格式结果：
+{
+  "dominantEmotion": "主导情绪类型(angry/anxious/sympathetic/positive/negative/neutral)",
+  "emotionDistribution": {
+    "angry": { "count": 数量, "percentage": 百分比, "avgIntensity": 平均强度1-5 },
+    "anxious": { "count": 数量, "percentage": 百分比, "avgIntensity": 平均强度1-5 },
+    "sympathetic": { "count": 数量, "percentage": 百分比, "avgIntensity": 平均强度1-5 },
+    "positive": { "count": 数量, "percentage": 百分比, "avgIntensity": 平均强度1-5 },
+    "negative": { "count": 数量, "percentage": 百分比, "avgIntensity": 平均强度1-5 },
+    "neutral": { "count": 数量, "percentage": 百分比, "avgIntensity": 平均强度1-5 }
+  },
+  "emotionDetails": {
+    "angry": { "examples": [{"index": 索引, "content": "内容片段", "intensity": 强度}] },
+    "anxious": { "examples": [{"index": 索引, "content": "内容片段", "intensity": 强度}] },
+    ...
+  },
+  "totalAnalyzed": 分析总数
+}
 
-    // 确定主导情绪
-    let dominantEmotion = 'neutral';
-    let maxCount = 0;
-    
-    for (const [type, data] of Object.entries(emotions)) {
-      if (data.count > maxCount) {
-        maxCount = data.count;
-        dominantEmotion = type;
-      }
-    }
+分析要求：
+1. 基于内容语义判断情绪，不要仅依赖关键词
+2. 考虑上下文和语境
+3. 识别隐含情绪（如反讽、隐喻）
+4. 强度评分1-5，5为最强烈`;
 
-    return {
-      totalAnalyzed: total,
-      dominantEmotion,
-      distribution,
-      details: emotions
-    };
-  }
-
-  /**
-   * 分析立场倾向
-   */
-  analyzeStance(data) {
-    const stances = {
-      support: { count: 0, users: new Set(), examples: [] },
-      oppose: { count: 0, users: new Set(), examples: [] },
-      question: { count: 0, users: new Set(), examples: [] },
-      neutral: { count: 0, users: new Set(), examples: [] }
-    };
-
-    data.forEach((item, index) => {
-      const content = item.content || item.text || '';
-      const userId = item.userId || item.author || `user_${index}`;
-      
-      // 分析每种立场
-      for (const [stanceType, keywords] of Object.entries(this.stanceKeywords)) {
-        let matched = false;
-        
-        keywords.forEach(keyword => {
-          if (content.includes(keyword)) {
-            matched = true;
-          }
-        });
-
-        if (matched) {
-          stances[stanceType].count++;
-          stances[stanceType].users.add(userId);
-          
-          // 保存示例
-          if (stances[stanceType].examples.length < 3) {
-            stances[stanceType].examples.push({
-              index,
-              userId,
-              content: content.substring(0, 100)
-            });
-          }
-        }
-      }
-    });
-
-    // 转换Set为Array
-    for (const stance of Object.values(stances)) {
-      stance.users = Array.from(stance.users);
-    }
-
-    // 计算立场分布
-    const total = data.length;
-    const distribution = {};
-    
-    for (const [type, data] of Object.entries(stances)) {
-      distribution[type] = {
-        count: data.count,
-        percentage: total > 0 ? (data.count / total * 100).toFixed(1) : 0,
-        uniqueUsers: data.users.length
-      };
-    }
-
-    // 确定主导立场
-    let dominantStance = 'neutral';
-    let maxCount = 0;
-    
-    for (const [type, data] of Object.entries(stances)) {
-      if (data.count > maxCount) {
-        maxCount = data.count;
-        dominantStance = type;
-      }
-    }
-
-    return {
-      totalAnalyzed: total,
-      dominantStance,
-      distribution,
-      details: stances
-    };
-  }
-
-  /**
-   * 追踪情绪演变
-   */
-  trackEmotionEvolution(data, emotionAnalysis) {
-    // 按时间排序数据
-    const sortedData = [...data].sort((a, b) => {
-      const timeA = new Date(a.createdAt || a.time || 0);
-      const timeB = new Date(b.createdAt || b.time || 0);
-      return timeA - timeB;
-    });
-
-    // 分阶段分析（初期、发酵期、高峰期、平息期）
-    const stages = {
-      early: { range: [0, 0.25], emotions: {}, label: '初期' },
-      developing: { range: [0.25, 0.5], emotions: {}, label: '发酵期' },
-      peak: { range: [0.5, 0.75], emotions: {}, label: '高峰期' },
-      declining: { range: [0.75, 1], emotions: {}, label: '平息期' }
-    };
-
-    const total = sortedData.length;
-    
-    for (const [stageName, stage] of Object.entries(stages)) {
-      const startIdx = Math.floor(total * stage.range[0]);
-      const endIdx = Math.floor(total * stage.range[1]);
-      const stageData = sortedData.slice(startIdx, endIdx);
-      
-      // 分析该阶段的主导情绪
-      const stageEmotions = {};
-      
-      stageData.forEach(item => {
-        const content = item.content || item.text || '';
-        
-        for (const [emotionType, keywords] of Object.entries(this.emotionKeywords)) {
-          keywords.forEach(keyword => {
-            if (content.includes(keyword)) {
-              stageEmotions[emotionType] = (stageEmotions[emotionType] || 0) + 1;
-            }
-          });
-        }
+    try {
+      const response = await this.llmClient.chat(prompt, {
+        temperature: 0.3,
+        maxTokens: 2000
       });
 
-      // 找出主导情绪
-      let dominant = 'neutral';
-      let maxCount = 0;
-      
-      for (const [type, count] of Object.entries(stageEmotions)) {
-        if (count > maxCount) {
-          maxCount = count;
-          dominant = type;
-        }
-      }
+      const result = this.parseLLMResponse(response.content);
+      return result;
+    } catch (error) {
+      logger.error('[V2] LLM情绪分析失败:', error);
+      // 返回默认结果
+      return this.getDefaultEmotionResult(data.length);
+    }
+  }
 
-      stages[stageName].emotions = stageEmotions;
-      stages[stageName].dominantEmotion = dominant;
-      stages[stageName].dataCount = stageData.length;
+  /**
+   * 使用LLM分析立场倾向
+   */
+  async analyzeStanceWithLLM(data) {
+    const dataSummary = data.map((item, idx) => ({
+      index: idx,
+      content: (item.content || item.text || '').substring(0, 200),
+      author: item.userId || item.author || `user_${idx}`
+    })).slice(0, 20);
+
+    const prompt = `你是一个专业的立场分析专家。请分析以下社交媒体内容的立场倾向。
+
+数据：
+${JSON.stringify(dataSummary, null, 2)}
+
+请输出JSON格式结果：
+{
+  "dominantStance": "主导立场(support/oppose/question/neutral)",
+  "stanceDistribution": {
+    "support": { "count": 数量, "percentage": 百分比, "uniqueUsers": 独立用户数 },
+    "oppose": { "count": 数量, "percentage": 百分比, "uniqueUsers": 独立用户数 },
+    "question": { "count": 数量, "percentage": 百分比, "uniqueUsers": 独立用户数 },
+    "neutral": { "count": 数量, "percentage": 百分比, "uniqueUsers": 独立用户数 }
+  },
+  "stanceDetails": {
+    "support": { "examples": [{"index": 索引, "userId": "用户ID", "content": "内容片段"}] },
+    "oppose": { "examples": [{"index": 索引, "userId": "用户ID", "content": "内容片段"}] },
+    ...
+  },
+  "totalAnalyzed": 分析总数
+}
+
+分析要求：
+1. support: 明确支持、赞同、同意某一方
+2. oppose: 明确反对、抵制、批评某一方
+3. question: 质疑、疑问、不解
+4. neutral: 中立、客观、仅陈述事实`;
+
+    try {
+      const response = await this.llmClient.chat(prompt, {
+        temperature: 0.3,
+        maxTokens: 2000
+      });
+
+      const result = this.parseLLMResponse(response.content);
+      return result;
+    } catch (error) {
+      logger.error('[V2] LLM立场分析失败:', error);
+      return this.getDefaultStanceResult(data.length);
+    }
+  }
+
+  /**
+   * 使用LLM追踪情绪演变
+   */
+  async trackEmotionEvolutionWithLLM(data) {
+    // 按时间排序
+    const sortedData = [...data].sort((a, b) => {
+      return new Date(a.createdAt || a.time || 0) - new Date(b.createdAt || b.time || 0);
+    });
+
+    // 分阶段采样
+    const total = sortedData.length;
+    const stageSize = Math.ceil(total / 4);
+    const stages = [];
+    
+    for (let i = 0; i < 4 && i * stageSize < total; i++) {
+      const startIdx = i * stageSize;
+      const endIdx = Math.min((i + 1) * stageSize, total);
+      const stageData = sortedData.slice(startIdx, endIdx);
+      
+      stages.push({
+        label: ['early', 'developing', 'peak', 'declining'][i],
+        name: ['初期', '发酵期', '高峰期', '平息期'][i],
+        data: stageData.map((item, idx) => ({
+          index: startIdx + idx,
+          content: (item.content || item.text || '').substring(0, 150),
+          time: item.createdAt || item.time
+        }))
+      });
     }
 
-    return stages;
+    const prompt = `你是一个专业的情绪演变分析专家。请分析以下四个阶段的情绪变化。
+
+阶段数据：
+${JSON.stringify(stages, null, 2)}
+
+请输出JSON格式结果：
+{
+  "early": {
+    "label": "初期",
+    "dominantEmotion": "主导情绪",
+    "emotions": { "angry": 数量, "anxious": 数量, ... },
+    "dataCount": 数据量,
+    "description": "阶段情绪特征描述"
+  },
+  "developing": { ... },
+  "peak": { ... },
+  "declining": { ... }
+}
+
+分析要求：
+1. 识别每个阶段的主导情绪
+2. 对比各阶段情绪变化
+3. 描述情绪演变趋势`;
+
+    try {
+      const response = await this.llmClient.chat(prompt, {
+        temperature: 0.3,
+        maxTokens: 2000
+      });
+
+      const result = this.parseLLMResponse(response.content);
+      return result;
+    } catch (error) {
+      logger.error('[V2] LLM情绪演变分析失败:', error);
+      return this.getDefaultEvolutionResult();
+    }
+  }
+
+  /**
+   * 解析LLM响应
+   */
+  parseLLMResponse(response) {
+    try {
+      // 尝试直接解析
+      return JSON.parse(response);
+    } catch (e) {
+      // 尝试从代码块中提取
+      const codeBlockMatch = response.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (codeBlockMatch) {
+        return JSON.parse(codeBlockMatch[1]);
+      }
+      // 尝试提取JSON对象
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
+      }
+      throw new Error('无法解析LLM响应');
+    }
+  }
+
+  /**
+   * 获取默认情绪结果
+   */
+  getDefaultEmotionResult(total) {
+    return {
+      totalAnalyzed: total,
+      dominantEmotion: 'neutral',
+      distribution: {
+        angry: { count: 0, percentage: 0, avgIntensity: 0 },
+        anxious: { count: 0, percentage: 0, avgIntensity: 0 },
+        sympathetic: { count: 0, percentage: 0, avgIntensity: 0 },
+        positive: { count: 0, percentage: 0, avgIntensity: 0 },
+        negative: { count: 0, percentage: 0, avgIntensity: 0 },
+        neutral: { count: total, percentage: 100, avgIntensity: 1 }
+      },
+      emotionDetails: {}
+    };
+  }
+
+  /**
+   * 获取默认立场结果
+   */
+  getDefaultStanceResult(total) {
+    return {
+      totalAnalyzed: total,
+      dominantStance: 'neutral',
+      distribution: {
+        support: { count: 0, percentage: 0, uniqueUsers: 0 },
+        oppose: { count: 0, percentage: 0, uniqueUsers: 0 },
+        question: { count: 0, percentage: 0, uniqueUsers: 0 },
+        neutral: { count: total, percentage: 100, uniqueUsers: total }
+      },
+      stanceDetails: {}
+    };
+  }
+
+  /**
+   * 获取默认演变结果
+   */
+  getDefaultEvolutionResult() {
+    return {
+      early: { label: '初期', dominantEmotion: 'neutral', emotions: {}, dataCount: 0, description: '无数据' },
+      developing: { label: '发酵期', dominantEmotion: 'neutral', emotions: {}, dataCount: 0, description: '无数据' },
+      peak: { label: '高峰期', dominantEmotion: 'neutral', emotions: {}, dataCount: 0, description: '无数据' },
+      declining: { label: '平息期', dominantEmotion: 'neutral', emotions: {}, dataCount: 0, description: '无数据' }
+    };
   }
 
   /**
@@ -304,7 +328,6 @@ class EmotionAgent extends BaseAgentV2 {
       const prevStage = stages[i - 1][1];
       const currStage = stages[i][1];
       
-      // 检测情绪类型变化
       if (prevStage.dominantEmotion !== currStage.dominantEmotion) {
         turningPoints.push({
           from: prevStage.label,
@@ -322,7 +345,6 @@ class EmotionAgent extends BaseAgentV2 {
    * 计算拐点重要性
    */
   calculateTurningSignificance(prevStage, currStage) {
-    // 从负面情绪转向正面情绪是重要拐点
     const negativeEmotions = ['angry', 'anxious', 'negative'];
     const positiveEmotions = ['positive', 'sympathetic'];
     
@@ -343,17 +365,15 @@ class EmotionAgent extends BaseAgentV2 {
    * 计算置信度
    */
   calculateConfidence(emotionAnalysis, stanceAnalysis) {
-    let score = 0.7; // 基础分
+    let score = 0.7;
     
-    // 根据分析数量加分
-    const totalAnalyzed = emotionAnalysis.totalAnalyzed;
+    const totalAnalyzed = emotionAnalysis?.totalAnalyzed || 0;
     if (totalAnalyzed > 10) score += 0.1;
     if (totalAnalyzed > 50) score += 0.1;
     
-    // 根据情绪分布清晰度加分
-    const emotionDistribution = emotionAnalysis.distribution;
-    const hasClearDominant = Object.values(emotionDistribution)
-      .some(e => parseFloat(e.percentage) > 30);
+    const distribution = emotionAnalysis?.distribution || {};
+    const hasClearDominant = Object.values(distribution)
+      .some(e => parseFloat(e?.percentage || 0) > 30);
     if (hasClearDominant) score += 0.1;
     
     return Math.min(1, score);
@@ -365,33 +385,26 @@ class EmotionAgent extends BaseAgentV2 {
   generateInsights(emotionAnalysis, stanceAnalysis, turningPoints) {
     const insights = [];
 
-    // 情绪洞察
-    const dominantEmotion = emotionAnalysis.dominantEmotion;
-    const emotionPercent = emotionAnalysis.distribution[dominantEmotion]?.percentage || 0;
+    const dominantEmotion = emotionAnalysis?.dominantEmotion || 'neutral';
+    const emotionDistribution = emotionAnalysis?.distribution || {};
+    const emotionPercent = emotionDistribution[dominantEmotion]?.percentage || 0;
     insights.push(`主导情绪为${this.translateEmotion(dominantEmotion)}，占比${emotionPercent}%`);
 
-    // 立场洞察
-    const dominantStance = stanceAnalysis.dominantStance;
-    const stancePercent = stanceAnalysis.distribution[dominantStance]?.percentage || 0;
+    const dominantStance = stanceAnalysis?.dominantStance || 'neutral';
+    const stanceDistribution = stanceAnalysis?.distribution || {};
+    const stancePercent = stanceDistribution[dominantStance]?.percentage || 0;
     insights.push(`主要立场倾向为${this.translateStance(dominantStance)}，占比${stancePercent}%`);
 
-    // 拐点洞察
-    if (turningPoints.length > 0) {
+    if (turningPoints && turningPoints.length > 0) {
       insights.push(`检测到${turningPoints.length}个关键情绪拐点`);
       turningPoints.forEach((point, i) => {
         if (point.significance === 'high') {
-          insights.push(`重要拐点${i + 1}: ${point.from}→${point.to}，情绪从${this.translateEmotion(point.emotionChange.split(' → ')[0])}转为${this.translateEmotion(point.emotionChange.split(' → ')[1])}`);
+          const [from, to] = (point.emotionChange || '').split(' → ');
+          if (from && to) {
+            insights.push(`重要拐点${i + 1}: ${point.from}→${point.to}，情绪从${this.translateEmotion(from)}转为${this.translateEmotion(to)}`);
+          }
         }
       });
-    }
-
-    // 演变洞察
-    const evolution = Object.entries(emotionAnalysis.details)
-      .filter(([_, data]) => data.count > 0)
-      .sort((a, b) => b[1].count - a[1].count);
-    
-    if (evolution.length >= 2) {
-      insights.push(`次要情绪包括${this.translateEmotion(evolution[1][0])}(${emotionAnalysis.distribution[evolution[1][0]].percentage}%)`);
     }
 
     return insights;
@@ -402,7 +415,8 @@ class EmotionAgent extends BaseAgentV2 {
    */
   generateRecommendations(emotionAnalysis) {
     const recommendations = [];
-    const dominantEmotion = emotionAnalysis.dominantEmotion;
+    const dominantEmotion = emotionAnalysis?.dominantEmotion || 'neutral';
+    const distribution = emotionAnalysis?.distribution || {};
 
     if (dominantEmotion === 'angry' || dominantEmotion === 'negative') {
       recommendations.push('负面情绪占主导，建议及时回应关切，平息公众情绪');
@@ -413,8 +427,8 @@ class EmotionAgent extends BaseAgentV2 {
       recommendations.push('公众情绪偏向同情支持，可顺势引导正面舆论');
     }
 
-    // 检查情绪强度
-    const avgIntensity = parseFloat(emotionAnalysis.distribution[dominantEmotion]?.avgIntensity || 0);
+    const emotionData = distribution[dominantEmotion] || {};
+    const avgIntensity = parseFloat(emotionData.avgIntensity || 0);
     if (avgIntensity > 2) {
       recommendations.push('情绪强度较高，需密切关注舆情发展，防止事态升级');
     }
@@ -457,12 +471,10 @@ class EmotionAgent extends BaseAgentV2 {
     logger.info('[V2] 情绪态度分析智能体调整策略:', guidance);
     
     if (guidance.focusEmotions) {
-      // 聚焦特定情绪类型
       this.focusEmotions = guidance.focusEmotions;
     }
     
     if (guidance.deepAnalysis) {
-      // 深度分析模式
       this.deepAnalysis = true;
     }
   }

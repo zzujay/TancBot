@@ -1,6 +1,6 @@
 /**
  * 风险/影响研判智能体 (Risk Agent)
- * 聚焦"潜在影响"，基于事实和传播特征，分析舆情事件的潜在风险、影响范围和程度
+ * 基于LLM的风险研判，分析舆情事件的潜在风险和影响
  */
 
 const BaseAgentV2 = require('../base-agent-v2');
@@ -10,16 +10,19 @@ class RiskAgent extends BaseAgentV2 {
   constructor() {
     super(
       '风险影响研判智能体',
-      '聚焦潜在影响，识别风险类型、评估风险等级、预判发展趋势',
+      '基于LLM分析潜在风险、影响范围和应对建议',
       'analyzer'
     );
-    this.riskTypes = {
-      social: { name: '社会稳定风险', weight: 1.0 },
-      reputation: { name: '品牌声誉风险', weight: 0.9 },
-      legal: { name: '法律合规风险', weight: 0.95 },
-      economic: { name: '经济损失风险', weight: 0.8 },
-      political: { name: '政治敏感风险', weight: 1.0 }
-    };
+    this.llmClient = null;
+  }
+
+  async initialize() {
+    const LLMClient = require('../../../services/llm-client');
+    this.llmClient = LLMClient;
+    // 确保LLMClient已初始化
+    if (!this.llmClient.client) {
+      await this.llmClient.initialize();
+    }
   }
 
   async process(data, context = {}) {
@@ -27,25 +30,33 @@ class RiskAgent extends BaseAgentV2 {
     this.updateLastUsed();
 
     try {
-      // 1. 识别风险类型
-      const riskIdentification = this.identifyRisks(data, context);
+      if (!this.llmClient) {
+        await this.initialize();
+      }
 
-      // 2. 评估风险等级
-      const riskAssessment = this.assessRiskLevels(riskIdentification, data);
+      // 1. 使用LLM识别风险信号
+      const riskSignals = await this.identifyRiskSignalsWithLLM(data);
 
-      // 3. 预判发展趋势
-      const trendPrediction = this.predictTrend(data, context, riskAssessment);
+      // 2. 使用LLM评估风险等级
+      const riskAssessment = await this.assessRiskLevelWithLLM(data, riskSignals);
 
-      // 4. 计算置信度
-      const confidence = this.calculateConfidence(riskAssessment, trendPrediction);
+      // 3. 使用LLM分析影响范围
+      const impactAnalysis = await this.analyzeImpactWithLLM(data, riskSignals);
+
+      // 4. 使用LLM预测发展趋势
+      const trendPrediction = await this.predictTrendWithLLM(data, riskAssessment);
+
+      // 5. 计算置信度
+      const confidence = this.calculateConfidence(riskSignals, riskAssessment);
       this.setConfidence(confidence);
 
       const result = {
         confidence,
-        riskIdentification,
+        riskSignals,
         riskAssessment,
+        impactAnalysis,
         trendPrediction,
-        keyInsights: this.generateInsights(riskAssessment, trendPrediction),
+        keyInsights: this.generateInsights(riskAssessment, impactAnalysis, trendPrediction),
         recommendations: this.generateRecommendations(riskAssessment, trendPrediction)
       };
 
@@ -61,339 +72,411 @@ class RiskAgent extends BaseAgentV2 {
   }
 
   /**
-   * 识别风险类型
+   * 使用LLM识别风险信号
    */
-  identifyRisks(data, context) {
-    const identifiedRisks = [];
+  async identifyRiskSignalsWithLLM(data) {
+    const dataSummary = data.map((item, idx) => ({
+      index: idx,
+      content: (item.content || item.text || '').substring(0, 200),
+      time: item.createdAt || item.time,
+      reposts: item.reposts || item.repostCount || item.shares || 0,
+      comments: item.comments || item.commentCount || 0,
+      likes: item.likes || item.likeCount || 0
+    })).slice(0, 25);
 
-    // 分析每条数据的风险信号
-    data.forEach((item, index) => {
-      const content = item.content || item.text || '';
-      
-      // 社会稳定风险信号
-      const socialSignals = ['聚集', '抗议', '游行', '示威', '群体性', '集体', '维权', '上访'];
-      socialSignals.forEach(signal => {
-        if (content.includes(signal)) {
-          identifiedRisks.push({
-            type: 'social',
-            signal,
-            content: content.substring(0, 100),
-            index,
-            severity: 'high'
-          });
-        }
+    const prompt = `你是一个专业的风险识别专家。请分析以下社交媒体数据中的风险信号。
+
+数据：
+${JSON.stringify(dataSummary, null, 2)}
+
+请输出JSON格式结果：
+{
+  "signals": [
+    {
+      "type": "风险类型(social/reputation/legal/economic/political)",
+      "name": "风险名称",
+      "severity": "严重程度(1-3, 3最严重)",
+      "count": 出现次数,
+      "examples": [
+        { "index": 索引, "content": "内容片段", "context": "上下文" }
+      ],
+      "description": "风险描述"
+    }
+  ],
+  "totalSignals": 风险信号总数,
+  "primaryRiskType": "主要风险类型"
+}
+
+风险类型定义：
+1. social: 社会稳定风险（聚集、抗议、维权、上访等）
+2. reputation: 品牌声誉风险（质量、假货、欺骗、虚假宣传等）
+3. legal: 法律合规风险（违法、违规、侵权、犯罪等）
+4. economic: 经济损失风险（亏损、破产、裁员、赔偿等）
+5. political: 政治敏感风险（涉及政府、政策、体制等敏感话题）
+
+分析要求：
+1. 基于内容语义识别风险，不要仅依赖关键词
+2. 考虑上下文判断风险严重程度
+3. 区分真实风险和情绪化表达`;
+
+    try {
+      const response = await this.llmClient.chat(prompt, {
+        temperature: 0.3,
+        maxTokens: 2500
       });
 
-      // 品牌声誉风险信号
-      const reputationSignals = ['质量', '假货', '欺骗', '虚假宣传', '服务态度', '售后', '投诉'];
-      reputationSignals.forEach(signal => {
-        if (content.includes(signal)) {
-          identifiedRisks.push({
-            type: 'reputation',
-            signal,
-            content: content.substring(0, 100),
-            index,
-            severity: 'medium'
-          });
-        }
-      });
+      const result = this.parseLLMResponse(response.content);
+      return result.signals || [];
+    } catch (error) {
+      logger.error('[V2] LLM风险信号识别失败:', error);
+      return [];
+    }
+  }
 
-      // 法律合规风险信号
-      const legalSignals = ['违法', '违规', '侵权', '犯罪', '造假', '贿赂', '腐败', '贪污'];
-      legalSignals.forEach(signal => {
-        if (content.includes(signal)) {
-          identifiedRisks.push({
-            type: 'legal',
-            signal,
-            content: content.substring(0, 100),
-            index,
-            severity: 'high'
-          });
-        }
-      });
-
-      // 经济损失风险信号
-      const economicSignals = ['亏损', '破产', '裁员', '倒闭', '债务', '赔偿', '罚款'];
-      economicSignals.forEach(signal => {
-        if (content.includes(signal)) {
-          identifiedRisks.push({
-            type: 'economic',
-            signal,
-            content: content.substring(0, 100),
-            index,
-            severity: 'medium'
-          });
-        }
-      });
-
-      // 政治敏感风险信号
-      const politicalSignals = ['政府', '官员', '政策', '体制', '制度', '领导', '部门'];
-      politicalSignals.forEach(signal => {
-        if (content.includes(signal)) {
-          identifiedRisks.push({
-            type: 'political',
-            signal,
-            content: content.substring(0, 100),
-            index,
-            severity: 'high'
-          });
-        }
-      });
-    });
-
-    // 统计各类风险
-    const riskSummary = {};
-    Object.keys(this.riskTypes).forEach(type => {
-      const typeRisks = identifiedRisks.filter(r => r.type === type);
-      riskSummary[type] = {
-        count: typeRisks.length,
-        severity: typeRisks.length > 0 ? Math.max(...typeRisks.map(r => r.severity === 'high' ? 2 : 1)) : 0,
-        examples: typeRisks.slice(0, 3)
-      };
-    });
-
-    return {
-      totalSignals: identifiedRisks.length,
-      riskSummary,
-      allSignals: identifiedRisks
+  /**
+   * 使用LLM评估风险等级
+   */
+  async assessRiskLevelWithLLM(data, riskSignals) {
+    const dataSummary = {
+      totalPosts: data.length,
+      uniqueUsers: new Set(data.map(item => item.userId || item.author)).size,
+      totalInteractions: data.reduce((sum, item) => {
+        return sum + (item.reposts || item.shares || 0) + (item.comments || 0) + (item.likes || 0);
+      }, 0),
+      timeSpan: this.calculateTimeSpan(data)
     };
+
+    const prompt = `你是一个专业的风险评估专家。请基于以下信息评估风险等级。
+
+数据概况：
+${JSON.stringify(dataSummary, null, 2)}
+
+风险信号：
+${JSON.stringify(riskSignals.slice(0, 10), null, 2)}
+
+请输出JSON格式结果：
+{
+  "overallLevel": "总体风险等级(critical/high/medium/low)",
+  "overallScore": 风险分数(0-100),
+  "typeAssessments": [
+    {
+      "type": "风险类型",
+      "name": "风险名称",
+      "level": "风险等级",
+      "score": 分数,
+      "weight": 权重,
+      "weightedScore": 加权分数,
+      "reasoning": "评估理由"
+    }
+  ],
+  "assessmentFactors": {
+    "signalStrength": { "score": 信号强度分数, "reasoning": "理由" },
+    "propagationRange": { "score": 传播范围分数, "reasoning": "理由" },
+    "interactionScale": { "score": 互动规模分数, "reasoning": "理由" },
+    "emotionIntensity": { "score": 情绪激烈分数, "reasoning": "理由" },
+    "timeUrgency": { "score": 时间紧迫分数, "reasoning": "理由" }
+  }
+}
+
+风险等级标准：
+- critical (80-100): 极高风险，需立即响应
+- high (60-79): 高风险，需密切关注
+- medium (40-59): 中等风险，需持续监测
+- low (0-39): 低风险，常规关注
+
+评分因素：
+1. signalStrength: 风险信号的数量和严重程度
+2. propagationRange: 传播覆盖的用户数量
+3. interactionScale: 总互动量（转发、评论、点赞）
+4. emotionIntensity: 负面情绪的强度和集中度
+5. timeUrgency: 舆情发展速度和响应时间窗口`;
+
+    try {
+      const response = await this.llmClient.chat(prompt, {
+        temperature: 0.3,
+        maxTokens: 2500
+      });
+
+      const result = this.parseLLMResponse(response.content);
+      return result;
+    } catch (error) {
+      logger.error('[V2] LLM风险评估失败:', error);
+      return this.getDefaultRiskAssessment();
+    }
   }
 
   /**
-   * 评估风险等级
+   * 使用LLM分析影响范围
    */
-  assessRiskLevels(riskIdentification, data) {
-    const assessments = {};
-    let overallScore = 0;
-    let overallLevel = 'low';
+  async analyzeImpactWithLLM(data, riskSignals) {
+    const dataSummary = data.map((item, idx) => ({
+      index: idx,
+      content: (item.content || item.text || '').substring(0, 150),
+      author: item.userId || item.author || `user_${idx}`
+    })).slice(0, 20);
 
-    // 计算传播指标
-    const totalReposts = data.reduce((sum, item) => sum + (item.reposts || 0), 0);
-    const totalComments = data.reduce((sum, item) => sum + (item.comments || 0), 0);
-    const totalLikes = data.reduce((sum, item) => sum + (item.likes || 0), 0);
-    const totalEngagement = totalReposts + totalComments + totalLikes;
-    const uniqueUsers = new Set(data.map(item => item.userId || item.author)).size;
+    const prompt = `你是一个专业的影响分析专家。请分析以下舆情事件的潜在影响范围。
 
-    // 评估每类风险
-    Object.entries(riskIdentification.riskSummary).forEach(([type, info]) => {
-      if (info.count === 0) {
-        assessments[type] = {
-          level: 'low',
-          score: 0,
-          description: `未发现${this.riskTypes[type].name}`
-        };
-        return;
-      }
+数据：
+${JSON.stringify(dataSummary, null, 2)}
 
-      // 基础分数（基于风险信号数量）
-      let score = Math.min(100, info.count * 10);
+主要风险信号：
+${JSON.stringify(riskSignals.slice(0, 5), null, 2)}
 
-      // 根据传播范围调整
-      if (uniqueUsers > 1000) score += 15;
-      else if (uniqueUsers > 500) score += 10;
-      else if (uniqueUsers > 100) score += 5;
+请输出JSON格式结果：
+{
+  "affectedEntities": [
+    {
+      "type": "实体类型(individual/organization/brand/government/industry)",
+      "name": "实体名称或描述",
+      "impactLevel": "影响程度(high/medium/low)",
+      "impactDescription": "影响描述"
+    }
+  ],
+  "affectedAreas": [
+    {
+      "area": "影响领域",
+      "severity": "严重程度",
+      "description": "具体影响"
+    }
+  ],
+  "potentialConsequences": [
+    {
+      "type": "后果类型",
+      "probability": "可能性(high/medium/low)",
+      "severity": "严重程度",
+      "description": "后果描述",
+      "timeframe": "时间框架"
+    }
+  ],
+  "escalationRisk": {
+    "level": "升级风险等级",
+    "factors": ["升级因素1", "升级因素2"],
+    "triggers": ["触发条件1", "触发条件2"]
+  }
+}
 
-      // 根据互动量调整
-      if (totalEngagement > 10000) score += 15;
-      else if (totalEngagement > 5000) score += 10;
-      else if (totalEngagement > 1000) score += 5;
+实体类型：
+- individual: 个人（当事人、相关人物）
+- organization: 组织（企业、机构）
+- brand: 品牌
+- government: 政府部门
+- industry: 行业
 
-      // 根据严重程度调整
-      if (info.severity === 2) score += 10;
+影响领域：
+- reputation: 声誉影响
+- economic: 经济影响
+- social: 社会影响
+- legal: 法律影响
+- political: 政治影响`;
 
-      // 加权
-      score = score * this.riskTypes[type].weight;
-      score = Math.min(100, score);
+    try {
+      const response = await this.llmClient.chat(prompt, {
+        temperature: 0.3,
+        maxTokens: 2500
+      });
 
-      // 确定等级
-      let level = 'low';
-      if (score >= 80) level = 'critical';
-      else if (score >= 60) level = 'high';
-      else if (score >= 40) level = 'medium';
-
-      assessments[type] = {
-        level,
-        score: Math.round(score),
-        description: `发现${info.count}个${this.riskTypes[type].name}信号`,
-        affectedAreas: this.identifyAffectedAreas(type, data),
-        examples: info.examples
-      };
-
-      // 更新整体风险
-      if (score > overallScore) {
-        overallScore = score;
-        overallLevel = level;
-      }
-    });
-
-    return {
-      overallLevel,
-      overallScore: Math.round(overallScore),
-      individualRisks: assessments,
-      riskDistribution: this.calculateRiskDistribution(assessments)
-    };
+      const result = this.parseLLMResponse(response.content);
+      return result;
+    } catch (error) {
+      logger.error('[V2] LLM影响分析失败:', error);
+      return this.getDefaultImpactAnalysis();
+    }
   }
 
   /**
-   * 识别受影响领域
+   * 使用LLM预测发展趋势
    */
-  identifyAffectedAreas(riskType, data) {
-    const areas = new Set();
-    
-    data.forEach(item => {
-      const content = item.content || '';
-      
-      if (riskType === 'reputation') {
-        if (content.includes('产品')) areas.add('产品声誉');
-        if (content.includes('服务')) areas.add('服务声誉');
-        if (content.includes('品牌')) areas.add('品牌形象');
-      } else if (riskType === 'economic') {
-        if (content.includes('销售')) areas.add('销售业绩');
-        if (content.includes('股价')) areas.add('股价市值');
-        if (content.includes('投资')) areas.add('投资者信心');
-      }
-    });
-
-    return Array.from(areas);
-  }
-
-  /**
-   * 计算风险分布
-   */
-  calculateRiskDistribution(assessments) {
-    const distribution = { critical: 0, high: 0, medium: 0, low: 0 };
-    
-    Object.values(assessments).forEach(assessment => {
-      distribution[assessment.level]++;
-    });
-
-    return distribution;
-  }
-
-  /**
-   * 预判发展趋势
-   */
-  predictTrend(data, context, riskAssessment) {
-    // 按时间排序
+  async predictTrendWithLLM(data, riskAssessment) {
     const sortedData = [...data].sort((a, b) => {
       return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
     });
 
-    // 分析近期趋势（最近30%的数据）
-    const recentStart = Math.floor(sortedData.length * 0.7);
-    const recentData = sortedData.slice(recentStart);
-    const earlyData = sortedData.slice(0, Math.floor(sortedData.length * 0.3));
+    // 分早期和近期
+    const midPoint = Math.floor(sortedData.length / 2);
+    const earlyData = sortedData.slice(0, midPoint);
+    const recentData = sortedData.slice(midPoint);
 
-    // 计算近期vs早期的互动变化
-    const recentEngagement = recentData.reduce((sum, item) => {
-      return sum + (item.reposts || 0) + (item.comments || 0) + (item.likes || 0);
-    }, 0);
-
-    const earlyEngagement = earlyData.reduce((sum, item) => {
-      return sum + (item.reposts || 0) + (item.comments || 0) + (item.likes || 0);
-    }, 0);
-
-    const engagementTrend = earlyEngagement > 0 ? 
-      (recentEngagement / earlyEngagement - 1) * 100 : 0;
-
-    // 分析情绪趋势
-    const recentNegative = recentData.filter(item => {
-      const content = item.content || '';
-      return content.includes('愤怒') || content.includes('不满') || content.includes('反对');
-    }).length;
-
-    const negativeRatio = recentData.length > 0 ? recentNegative / recentData.length : 0;
-
-    // 判断趋势
-    let trend = 'stable';
-    let trendDescription = '舆情发展平稳';
-
-    if (engagementTrend > 50 && negativeRatio > 0.5) {
-      trend = 'escalating';
-      trendDescription = '舆情呈升级趋势，负面情绪占主导';
-    } else if (engagementTrend > 20) {
-      trend = 'growing';
-      trendDescription = '舆情持续发酵，关注度上升';
-    } else if (engagementTrend < -30) {
-      trend = 'declining';
-      trendDescription = '舆情逐渐平息，关注度下降';
-    } else if (engagementTrend < -10) {
-      trend = 'cooling';
-      trendDescription = '舆情降温中';
-    }
-
-    // 预测未来走向
-    let prediction = '';
-    const overallRisk = riskAssessment.overallLevel;
-    
-    if (overallRisk === 'critical' || overallRisk === 'high') {
-      if (trend === 'escalating' || trend === 'growing') {
-        prediction = '如不及时干预，舆情可能进一步升级，引发更大范围关注';
-      } else {
-        prediction = '当前风险较高，需持续关注防止反弹';
+    const trendData = {
+      early: {
+        postCount: earlyData.length,
+        avgInteractions: this.calculateAvgInteractions(earlyData),
+        dominantEmotion: '待分析'
+      },
+      recent: {
+        postCount: recentData.length,
+        avgInteractions: this.calculateAvgInteractions(recentData),
+        dominantEmotion: '待分析'
+      },
+      overall: {
+        totalPosts: data.length,
+        timeSpan: this.calculateTimeSpan(data),
+        currentRiskLevel: riskAssessment.overallLevel
       }
-    } else if (overallRisk === 'medium') {
-      prediction = '舆情可控，但需防范潜在风险点';
-    } else {
-      prediction = '舆情风险较低，预计将逐步平息';
-    }
+    };
 
+    const prompt = `你是一个专业的趋势预测专家。请基于以下信息预测舆情发展趋势。
+
+趋势数据：
+${JSON.stringify(trendData, null, 2)}
+
+当前风险等级：${riskAssessment.overallLevel}
+
+请输出JSON格式结果：
+{
+  "trend": "趋势类型(escalating/brewing/stable/de-escalating/resolving)",
+  "trendDescription": "趋势描述",
+  "confidence": "预测置信度(high/medium/low)",
+  "reasoning": "预测理由",
+  "predictedDevelopments": [
+    {
+      "timeframe": "时间框架(24h/48h/1w)",
+      "prediction": "预测内容",
+      "probability": "可能性"
+    }
+  ],
+  "keyIndicators": {
+    "volumeChange": { "value": "变化值", "trend": "趋势" },
+    "emotionChange": { "value": "变化值", "trend": "趋势" },
+    "engagementChange": { "value": "变化值", "trend": "趋势" }
+  },
+  "milestones": [
+    {
+      "event": "可能事件",
+      "probability": "可能性",
+      "impact": "影响"
+    }
+  ]
+}
+
+趋势类型：
+- escalating: 升级趋势（负面指标持续上升）
+- brewing: 发酵趋势（传播范围扩大但情绪尚未激化）
+- stable: 平稳趋势（各项指标波动较小）
+- de-escalating: 降温趋势（负面指标开始下降）
+- resolving: 平息趋势（各项指标回归正常）`;
+
+    try {
+      const response = await this.llmClient.chat(prompt, {
+        temperature: 0.3,
+        maxTokens: 2000
+      });
+
+      const result = this.parseLLMResponse(response.content);
+      return result;
+    } catch (error) {
+      logger.error('[V2] LLM趋势预测失败:', error);
+      return this.getDefaultTrendPrediction();
+    }
+  }
+
+  /**
+   * 计算时间跨度
+   */
+  calculateTimeSpan(data) {
+    if (data.length < 2) return 0;
+    
+    const sortedData = [...data].sort((a, b) => {
+      return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+    });
+    
+    const start = new Date(sortedData[0].createdAt || 0);
+    const end = new Date(sortedData[sortedData.length - 1].createdAt || 0);
+    
+    return (end - start) / (1000 * 60 * 60); // 返回小时数
+  }
+
+  /**
+   * 计算平均互动量
+   */
+  calculateAvgInteractions(data) {
+    if (data.length === 0) return 0;
+    
+    const total = data.reduce((sum, item) => {
+      return sum + (item.reposts || item.shares || 0) + (item.comments || 0) + (item.likes || 0);
+    }, 0);
+    
+    return Math.round(total / data.length);
+  }
+
+  /**
+   * 解析LLM响应
+   */
+  parseLLMResponse(response) {
+    try {
+      return JSON.parse(response);
+    } catch (e) {
+      const codeBlockMatch = response.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (codeBlockMatch) {
+        return JSON.parse(codeBlockMatch[1]);
+      }
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
+      }
+      throw new Error('无法解析LLM响应');
+    }
+  }
+
+  /**
+   * 获取默认风险评估
+   */
+  getDefaultRiskAssessment() {
     return {
-      currentTrend: trend,
-      trendDescription,
-      engagementChange: engagementTrend.toFixed(1) + '%',
-      negativeEmotionRatio: (negativeRatio * 100).toFixed(1) + '%',
-      prediction,
-      suggestedActions: this.suggestActions(trend, overallRisk)
+      overallLevel: 'low',
+      overallScore: 20,
+      typeAssessments: [],
+      assessmentFactors: {
+        signalStrength: { score: 20, reasoning: '无明显风险信号' },
+        propagationRange: { score: 20, reasoning: '传播范围有限' },
+        interactionScale: { score: 20, reasoning: '互动量较低' },
+        emotionIntensity: { score: 20, reasoning: '情绪相对平稳' },
+        timeUrgency: { score: 20, reasoning: '时间窗口充足' }
+      }
     };
   }
 
   /**
-   * 建议应对措施
+   * 获取默认影响分析
    */
-  suggestActions(trend, riskLevel) {
-    const actions = [];
+  getDefaultImpactAnalysis() {
+    return {
+      affectedEntities: [],
+      affectedAreas: [],
+      potentialConsequences: [],
+      escalationRisk: {
+        level: 'low',
+        factors: [],
+        triggers: []
+      }
+    };
+  }
 
-    if (riskLevel === 'critical' || riskLevel === 'high') {
-      actions.push('立即启动危机公关预案');
-      actions.push('成立专项应对小组');
-      actions.push('准备官方声明和回应口径');
-    }
-
-    if (trend === 'escalating') {
-      actions.push('加强舆情监测频率（每小时）');
-      actions.push('主动联系关键意见领袖');
-      actions.push('准备多渠道回应方案');
-    } else if (trend === 'growing') {
-      actions.push('密切关注舆情走向');
-      actions.push('收集整理事实依据');
-      actions.push('评估是否需要主动回应');
-    }
-
-    if (actions.length === 0) {
-      actions.push('保持常规监测');
-      actions.push('做好应对准备');
-    }
-
-    return actions;
+  /**
+   * 获取默认趋势预测
+   */
+  getDefaultTrendPrediction() {
+    return {
+      trend: 'stable',
+      trendDescription: '舆情发展相对平稳',
+      confidence: 'medium',
+      reasoning: '数据不足以做出准确预测',
+      predictedDevelopments: [],
+      keyIndicators: {},
+      milestones: []
+    };
   }
 
   /**
    * 计算置信度
    */
-  calculateConfidence(riskAssessment, trendPrediction) {
-    let score = 0.7;
+  calculateConfidence(riskSignals, riskAssessment) {
+    let score = 0.6;
 
-    // 基于风险识别完整性
-    const identifiedRiskTypes = Object.values(riskAssessment.individualRisks)
-      .filter(r => r.score > 0).length;
-    if (identifiedRiskTypes >= 3) score += 0.1;
-
-    // 基于趋势预测数据支撑
-    if (trendPrediction.engagementChange) score += 0.1;
-
-    // 基于整体风险等级清晰度
-    if (riskAssessment.overallLevel !== 'low') score += 0.1;
+    if (riskSignals.length > 0) score += 0.1;
+    if (riskSignals.length > 3) score += 0.1;
+    if (riskAssessment.typeAssessments?.length > 0) score += 0.1;
+    if (riskAssessment.assessmentFactors) score += 0.1;
 
     return Math.min(1, score);
   }
@@ -401,29 +484,37 @@ class RiskAgent extends BaseAgentV2 {
   /**
    * 生成关键洞察
    */
-  generateInsights(riskAssessment, trendPrediction) {
+  generateInsights(riskAssessment, impactAnalysis, trendPrediction) {
     const insights = [];
 
-    // 整体风险洞察
-    const overallLevel = riskAssessment.overallLevel;
-    const overallScore = riskAssessment.overallScore;
-    insights.push(`整体风险等级为${this.translateRiskLevel(overallLevel)}，评分${overallScore}/100`);
+    const levelMap = {
+      critical: '极高',
+      high: '高',
+      medium: '中等',
+      low: '低'
+    };
+    insights.push(`总体风险等级为${levelMap[riskAssessment.overallLevel] || riskAssessment.overallLevel}，风险分数${riskAssessment.overallScore}`);
 
-    // 主要风险类型洞察
-    const highRisks = Object.entries(riskAssessment.individualRisks)
-      .filter(([_, r]) => r.level === 'high' || r.level === 'critical')
-      .map(([type, _]) => this.riskTypes[type].name);
-    
-    if (highRisks.length > 0) {
-      insights.push(`主要风险类型: ${highRisks.join('、')}`);
+    if (riskAssessment.typeAssessments?.length > 0) {
+      const primaryRisk = riskAssessment.typeAssessments[0];
+      insights.push(`主要风险类型: ${primaryRisk.name}，风险等级${levelMap[primaryRisk.level] || primaryRisk.level}`);
     }
 
-    // 趋势洞察
-    insights.push(`舆情趋势: ${trendPrediction.trendDescription}`);
-    insights.push(`互动量变化: ${trendPrediction.engagementChange}`);
+    if (impactAnalysis.affectedEntities?.length > 0) {
+      const highImpactEntities = impactAnalysis.affectedEntities.filter(e => e.impactLevel === 'high');
+      if (highImpactEntities.length > 0) {
+        insights.push(`识别到${highImpactEntities.length}个高影响实体`);
+      }
+    }
 
-    // 预测洞察
-    insights.push(`发展预测: ${trendPrediction.prediction}`);
+    const trendMap = {
+      escalating: '升级',
+      brewing: '发酵',
+      stable: '平稳',
+      'de-escalating': '降温',
+      resolving: '平息'
+    };
+    insights.push(`舆情呈${trendMap[trendPrediction.trend] || trendPrediction.trend}趋势，预测置信度${trendPrediction.confidence === 'high' ? '高' : trendPrediction.confidence === 'medium' ? '中' : '低'}`);
 
     return insights;
   }
@@ -432,34 +523,28 @@ class RiskAgent extends BaseAgentV2 {
    * 生成建议
    */
   generateRecommendations(riskAssessment, trendPrediction) {
-    const recommendations = [...trendPrediction.suggestedActions];
+    const recommendations = [];
 
-    // 基于风险等级的建议
-    if (riskAssessment.overallLevel === 'critical') {
-      recommendations.push('建议立即上报高层，启动最高级别响应');
-    } else if (riskAssessment.overallLevel === 'high') {
-      recommendations.push('建议24小时内发布官方回应');
+    if (riskAssessment.overallLevel === 'critical' || riskAssessment.overallLevel === 'high') {
+      recommendations.push('风险等级较高，建议立即启动应急响应机制');
+      recommendations.push('成立专项工作组，制定应对预案');
+    } else if (riskAssessment.overallLevel === 'medium') {
+      recommendations.push('风险等级中等，建议持续监测舆情动态');
+      recommendations.push('准备应对预案，做好随时响应准备');
     }
 
-    // 基于趋势的建议
-    if (trendPrediction.currentTrend === 'escalating') {
-      recommendations.push('建议主动联系核心传播节点，争取舆论转向');
+    if (trendPrediction.trend === 'escalating') {
+      recommendations.push('舆情呈升级趋势，需密切关注并及时干预');
+    } else if (trendPrediction.trend === 'brewing') {
+      recommendations.push('舆情处于发酵期，建议主动引导舆论走向');
+    }
+
+    const highUrgency = riskAssessment.assessmentFactors?.timeUrgency?.score > 60;
+    if (highUrgency) {
+      recommendations.push('时间窗口紧迫，需快速响应');
     }
 
     return recommendations;
-  }
-
-  /**
-   * 翻译风险等级
-   */
-  translateRiskLevel(level) {
-    const map = {
-      critical: '极高',
-      high: '高',
-      medium: '中',
-      low: '低'
-    };
-    return map[level] || level;
   }
 
   /**
@@ -472,9 +557,8 @@ class RiskAgent extends BaseAgentV2 {
       this.focusRiskTypes = guidance.focusRiskTypes;
     }
     
-    if (guidance.adjustThresholds) {
-      // 调整风险阈值
-      Object.assign(this.riskTypes, guidance.adjustThresholds);
+    if (guidance.deepRiskAnalysis) {
+      this.deepRiskAnalysis = true;
     }
   }
 }

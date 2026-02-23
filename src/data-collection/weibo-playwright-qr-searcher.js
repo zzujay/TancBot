@@ -19,6 +19,32 @@ class WeiboPlaywrightQRSearcher {
   }
 
   /**
+   * 解析中文数字（处理"万"、"千"等单位）
+   * @param {string} text - 包含数字的文本
+   * @returns {number} - 解析后的数字
+   */
+  parseChineseNumber(text) {
+    if (!text) return 0;
+    text = text.toString().trim();
+    
+    // 处理"万"
+    if (text.includes('万')) {
+      const num = parseFloat(text.replace('万', ''));
+      return isNaN(num) ? 0 : Math.round(num * 10000);
+    }
+    
+    // 处理"千"
+    if (text.includes('千')) {
+      const num = parseFloat(text.replace('千', ''));
+      return isNaN(num) ? 0 : Math.round(num * 1000);
+    }
+    
+    // 处理普通数字
+    const num = parseInt(text);
+    return isNaN(num) ? 0 : num;
+  }
+
+  /**
    * 初始化浏览器
    */
   async initialize() {
@@ -373,15 +399,37 @@ class WeiboPlaywrightQRSearcher {
             const timeElement = card.querySelector('.time') || card.querySelector('.from');
             const timeText = timeElement ? timeElement.textContent.trim() : '';
             
+            // 解析中文数字（处理"万"、"千"等单位）
+            const parseChineseNumber = (text) => {
+              if (!text) return 0;
+              text = text.toString().trim();
+              
+              // 处理"万"
+              if (text.includes('万')) {
+                const num = parseFloat(text.replace('万', ''));
+                return isNaN(num) ? 0 : Math.round(num * 10000);
+              }
+              
+              // 处理"千"
+              if (text.includes('千')) {
+                const num = parseFloat(text.replace('千', ''));
+                return isNaN(num) ? 0 : Math.round(num * 1000);
+              }
+              
+              // 处理普通数字
+              const num = parseInt(text);
+              return isNaN(num) ? 0 : num;
+            };
+            
             // 提取互动数据
             const likeElement = card.querySelector('[action-type="like"] .line') || card.querySelector('.like .line');
-            const likes = likeElement ? parseInt(likeElement.textContent) || 0 : 0;
+            const likes = likeElement ? parseChineseNumber(likeElement.textContent) : 0;
             
             const commentElement = card.querySelector('[action-type="fl_comment"] .line') || card.querySelector('.comment .line');
-            const comments = commentElement ? parseInt(commentElement.textContent) || 0 : 0;
+            const comments = commentElement ? parseChineseNumber(commentElement.textContent) : 0;
             
             const shareElement = card.querySelector('[action-type="fl_forward"] .line') || card.querySelector('.forward .line');
-            const shares = shareElement ? parseInt(shareElement.textContent) || 0 : 0;
+            const shares = shareElement ? parseChineseNumber(shareElement.textContent) : 0;
             
             // 提取微博ID
             const mid = card.getAttribute('mid') || card.getAttribute('data-mid') || `search_${Date.now()}_${index}`;

@@ -74,7 +74,7 @@ class FactAgent extends BaseAgentV2 {
    */
   async analyzeWithLLM(data, context) {
     const postsText = data.map((post, index) => 
-      `${index + 1}. [${post.publishTime || '未知时间'}] ${post.author || '匿名'}: ${post.content}`
+      `${index + 1}. [${post.publish_time || post.publishTime || '未知时间'}] ${post.author || '匿名'}: ${post.content || post.text || ''}`
     ).join('\n');
 
     const systemPrompt = `你是一个专业的事实梳理专家。你的任务是从社交媒体数据中提取客观事实，构建事件时间线，识别信息缺口。

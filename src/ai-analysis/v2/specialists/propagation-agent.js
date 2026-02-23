@@ -1,6 +1,6 @@
 /**
  * 传播路径分析智能体 (Propagation Agent)
- * 聚焦"传播规律"，分析舆情事件在微博的传播链路、关键节点和影响力
+ * 基于LLM的传播分析，分析舆情事件在微博的传播链路、关键节点和影响力
  */
 
 const BaseAgentV2 = require('../base-agent-v2');
@@ -10,14 +10,19 @@ class PropagationAgent extends BaseAgentV2 {
   constructor() {
     super(
       '传播路径分析智能体',
-      '聚焦传播规律，提取关键节点、梳理传播路径、分析传播速度和范围',
+      '基于LLM分析传播链路、关键节点、传播速度和范围',
       'analyzer'
     );
-    this.influenceThresholds = {
-      high: 10000,    // 高影响力：转发/点赞过万
-      medium: 1000,   // 中等影响力：过千
-      low: 100        // 低影响力：过百
-    };
+    this.llmClient = null;
+  }
+
+  async initialize() {
+    const LLMClient = require('../../../services/llm-client');
+    this.llmClient = LLMClient;
+    // 确保LLMClient已初始化
+    if (!this.llmClient.client) {
+      await this.llmClient.initialize();
+    }
   }
 
   async process(data, context = {}) {
@@ -25,19 +30,41 @@ class PropagationAgent extends BaseAgentV2 {
     this.updateLastUsed();
 
     try {
-      // 1. 提取传播关键节点
-      const keyNodes = this.extractKeyNodes(data);
+      if (!this.llmClient) {
+        await this.initialize();
+      }
 
-      // 2. 梳理传播路径
-      const propagationPaths = this.tracePropagationPaths(data, keyNodes);
+      // 数据验证和调试
+      if (data.length > 0) {
+        const sample = data[0];
+        logger.debug('[V2] 数据样本:', {
+          hasShares: 'shares' in sample,
+          hasReposts: 'reposts' in sample,
+          hasComments: 'comments' in sample,
+          hasLikes: 'likes' in sample,
+          shares: sample.shares,
+          reposts: sample.reposts,
+          comments: sample.comments,
+          likes: sample.likes
+        });
+      }
 
-      // 3. 分析传播速度和范围
-      const propagationMetrics = this.analyzePropagationMetrics(data);
+      // 1. 使用LLM提取传播关键节点
+      const keyNodes = await this.extractKeyNodesWithLLM(data);
 
-      // 4. 识别传播助推因素
-      const boostingFactors = this.identifyBoostingFactors(data);
+      // 2. 使用LLM梳理传播路径
+      const propagationPaths = await this.tracePropagationPathsWithLLM(data, keyNodes);
 
-      // 5. 计算置信度
+      // 3. 使用LLM分析传播阶段
+      const propagationStages = await this.analyzePropagationStagesWithLLM(data);
+
+      // 4. 使用LLM识别传播助推因素
+      const boostingFactors = await this.identifyBoostingFactorsWithLLM(data);
+
+      // 5. 计算传播指标
+      const propagationMetrics = this.calculatePropagationMetrics(data);
+
+      // 6. 计算置信度
       const confidence = this.calculateConfidence(keyNodes, propagationMetrics);
       this.setConfidence(confidence);
 
@@ -45,6 +72,7 @@ class PropagationAgent extends BaseAgentV2 {
         confidence,
         keyNodes,
         propagationPaths,
+        propagationStages,
         propagationMetrics,
         boostingFactors,
         keyInsights: this.generateInsights(keyNodes, propagationMetrics, boostingFactors),
@@ -63,231 +91,298 @@ class PropagationAgent extends BaseAgentV2 {
   }
 
   /**
-   * 提取传播关键节点
+   * 使用LLM提取传播关键节点
    */
-  extractKeyNodes(data) {
-    const nodes = {
-      originators: [],      // 首发账号
-      spreaders: [],        // 传播节点
-      opinionLeaders: [],   // 意见领袖
-      mediaAccounts: []     // 媒体账号
-    };
+  async extractKeyNodesWithLLM(data) {
+    // 准备数据摘要
+    const dataSummary = data.map((item, idx) => ({
+      index: idx,
+      userId: item.userId || item.author || `user_${idx}`,
+      content: (item.content || item.text || '').substring(0, 150),
+      time: item.createdAt || item.time,
+      reposts: item.reposts || item.repostCount || item.shares || 0,
+      comments: item.comments || item.commentCount || 0,
+      likes: item.likes || item.likeCount || 0,
+      followerCount: item.followerCount || 0
+    })).slice(0, 25);
 
-    // 按时间排序找出首发
+    const prompt = `你是一个专业的传播分析专家。请分析以下社交媒体数据的传播关键节点。
+
+数据：
+${JSON.stringify(dataSummary, null, 2)}
+
+请输出JSON格式结果：
+{
+  "summary": {
+    "totalNodes": 总节点数,
+    "originatorCount": 首发账号数,
+    "opinionLeaderCount": 意见领袖数,
+    "mediaCount": 媒体账号数,
+    "spreaderCount": 传播节点数
+  },
+  "originators": [
+    {
+      "userId": "用户ID",
+      "content": "内容摘要",
+      "timestamp": "时间",
+      "influence": 影响力分数
+    }
+  ],
+  "opinionLeaders": [
+    {
+      "userId": "用户ID",
+      "postCount": 发帖数,
+      "totalInfluence": 总影响力,
+      "followerCount": 粉丝数,
+      "influenceLevel": "high/medium/low"
+    }
+  ],
+  "mediaAccounts": [
+    {
+      "userId": "用户ID",
+      "postCount": 发帖数,
+      "totalInfluence": 总影响力
+    }
+  ],
+  "spreaders": [
+    {
+      "userId": "用户ID",
+      "postCount": 发帖数,
+      "totalInfluence": 总影响力
+    }
+  ]
+}
+
+节点识别标准：
+1. originators: 最早发布相关内容的账号
+2. opinionLeaders: 粉丝>10万或影响力>1万的账号
+3. mediaAccounts: 名称包含媒体关键词的账号
+4. spreaders: 有一定影响力但非意见领袖的账号
+
+影响力计算：转发*3 + 评论*2 + 点赞*1`;
+
+    try {
+      const response = await this.llmClient.chat(prompt, {
+        temperature: 0.3,
+        maxTokens: 2500
+      });
+
+      const result = this.parseLLMResponse(response.content);
+      return result;
+    } catch (error) {
+      logger.error('[V2] LLM关键节点提取失败:', error);
+      return this.getDefaultKeyNodesResult(data);
+    }
+  }
+
+  /**
+   * 使用LLM梳理传播路径
+   */
+  async tracePropagationPathsWithLLM(data, keyNodes) {
+    // 准备数据
     const sortedData = [...data].sort((a, b) => {
       return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
     });
 
-    // 识别首发账号
-    if (sortedData.length > 0) {
-      const firstPost = sortedData[0];
-      nodes.originators.push({
-        userId: firstPost.userId || firstPost.author || 'unknown',
-        content: (firstPost.content || '').substring(0, 100),
-        timestamp: firstPost.createdAt,
-        influence: this.calculateInfluence(firstPost)
-      });
+    const dataSummary = sortedData.map((item, idx) => ({
+      index: idx,
+      userId: item.userId || item.author || `user_${idx}`,
+      content: (item.content || item.text || '').substring(0, 100),
+      time: item.createdAt || item.time,
+      isRepost: item.isRepost || false,
+      sourceUser: item.sourceUser || null
+    })).slice(0, 20);
+
+    const prompt = `你是一个专业的传播路径分析专家。请分析以下数据的传播路径。
+
+数据：
+${JSON.stringify(dataSummary, null, 2)}
+
+关键节点：
+${JSON.stringify({
+  originators: keyNodes.originators?.slice(0, 3) || [],
+  opinionLeaders: keyNodes.opinionLeaders?.slice(0, 3) || []
+}, null, 2)}
+
+请输出JSON格式结果：
+{
+  "stages": [
+    {
+      "name": "阶段名称(萌芽期/发酵期/爆发期/平稳期)",
+      "label": "early/developing/peak/declining",
+      "postCount": 帖子数,
+      "description": "阶段特征描述"
     }
+  ],
+  "mainPaths": [
+    {
+      "type": "路径类型",
+      "description": "路径描述",
+      "nodes": [
+        { "type": "节点类型", "userId": "用户ID" }
+      ]
+    }
+  ],
+  "pathCount": 路径数量
+}
 
-    // 识别传播节点（按影响力排序）
-    const userInfluence = new Map();
-    
-    data.forEach(item => {
-      const userId = item.userId || item.author || 'unknown';
-      const influence = this.calculateInfluence(item);
-      
-      if (!userInfluence.has(userId)) {
-        userInfluence.set(userId, {
-          userId,
-          posts: [],
-          totalInfluence: 0,
-          followerCount: item.followerCount || 0
-        });
-      }
-      
-      const user = userInfluence.get(userId);
-      user.posts.push(item);
-      user.totalInfluence += influence;
-    });
+分析要求：
+1. 识别传播的主要阶段
+2. 梳理从首发到扩散的传播路径
+3. 描述各阶段特征`;
 
-    // 分类节点
-    const sortedUsers = Array.from(userInfluence.values())
-      .sort((a, b) => b.totalInfluence - a.totalInfluence);
+    try {
+      const response = await this.llmClient.chat(prompt, {
+        temperature: 0.3,
+        maxTokens: 2000
+      });
 
-    sortedUsers.forEach(user => {
-      const nodeInfo = {
-        userId: user.userId,
-        postCount: user.posts.length,
-        totalInfluence: user.totalInfluence,
-        followerCount: user.followerCount,
-        influenceLevel: this.classifyInfluenceLevel(user.totalInfluence)
-      };
-
-      // 分类：意见领袖或媒体账号
-      if (user.followerCount > 100000 || user.totalInfluence > this.influenceThresholds.high) {
-        if (this.isMediaAccount(user.userId)) {
-          nodes.mediaAccounts.push(nodeInfo);
-        } else {
-          nodes.opinionLeaders.push(nodeInfo);
-        }
-      } else if (user.totalInfluence > this.influenceThresholds.low) {
-        nodes.spreaders.push(nodeInfo);
-      }
-    });
-
-    return {
-      summary: {
-        totalNodes: userInfluence.size,
-        originatorCount: nodes.originators.length,
-        opinionLeaderCount: nodes.opinionLeaders.length,
-        mediaCount: nodes.mediaAccounts.length,
-        spreaderCount: nodes.spreaders.length
-      },
-      ...nodes
-    };
+      const result = this.parseLLMResponse(response.content);
+      return result;
+    } catch (error) {
+      logger.error('[V2] LLM传播路径分析失败:', error);
+      return this.getDefaultPropagationPathsResult();
+    }
   }
 
   /**
-   * 计算影响力分数
+   * 使用LLM分析传播阶段
    */
-  calculateInfluence(item) {
-    const reposts = item.reposts || item.repostCount || 0;
-    const comments = item.comments || item.commentCount || 0;
-    const likes = item.likes || item.likeCount || 0;
-    
-    // 加权计算：转发权重最高
-    return reposts * 3 + comments * 2 + likes * 1;
-  }
-
-  /**
-   * 分类影响力等级
-   */
-  classifyInfluenceLevel(influence) {
-    if (influence >= this.influenceThresholds.high) return 'high';
-    if (influence >= this.influenceThresholds.medium) return 'medium';
-    if (influence >= this.influenceThresholds.low) return 'low';
-    return 'minimal';
-  }
-
-  /**
-   * 判断是否为媒体账号
-   */
-  isMediaAccount(userId) {
-    const mediaKeywords = ['报', '网', '新闻', '媒体', 'TV', '电视台', '广播', '杂志'];
-    return mediaKeywords.some(keyword => userId.includes(keyword));
-  }
-
-  /**
-   * 梳理传播路径
-   */
-  tracePropagationPaths(data, keyNodes) {
-    const paths = [];
-    
-    // 简化版传播路径分析
-    // 实际应通过转发关系构建树状结构
-    
+  async analyzePropagationStagesWithLLM(data) {
     const sortedData = [...data].sort((a, b) => {
       return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
     });
 
-    // 识别主要传播阶段
-    const stages = this.identifyPropagationStages(sortedData);
-    
-    // 构建简化传播路径
-    if (keyNodes.originators.length > 0) {
-      const originator = keyNodes.originators[0];
-      
-      paths.push({
-        type: 'originator_to_leaders',
-        description: '首发账号→意见领袖',
-        nodes: [
-          { type: 'originator', userId: originator.userId },
-          ...keyNodes.opinionLeaders.slice(0, 3).map(leader => ({
-            type: 'opinion_leader',
-            userId: leader.userId
-          }))
-        ]
-      });
-
-      if (keyNodes.mediaAccounts.length > 0) {
-        paths.push({
-          type: 'originator_to_media',
-          description: '首发账号→媒体账号',
-          nodes: [
-            { type: 'originator', userId: originator.userId },
-            ...keyNodes.mediaAccounts.slice(0, 2).map(media => ({
-              type: 'media',
-              userId: media.userId
-            }))
-          ]
-        });
-      }
-    }
-
-    return {
-      stages,
-      mainPaths: paths,
-      pathCount: paths.length
-    };
-  }
-
-  /**
-   * 识别传播阶段
-   */
-  identifyPropagationStages(sortedData) {
+    // 分阶段采样
     const total = sortedData.length;
-    const stages = [];
-    
-    if (total === 0) return stages;
-
-    // 按时间分阶段
     const stageSize = Math.ceil(total / 4);
-    
-    const stageNames = ['萌芽期', '发酵期', '爆发期', '平稳期'];
-    const stageLabels = ['early', 'developing', 'peak', 'declining'];
+    const stages = [];
     
     for (let i = 0; i < 4 && i * stageSize < total; i++) {
       const startIdx = i * stageSize;
       const endIdx = Math.min((i + 1) * stageSize, total);
       const stageData = sortedData.slice(startIdx, endIdx);
       
-      // 计算该阶段的传播指标
-      const totalInfluence = stageData.reduce((sum, item) => sum + this.calculateInfluence(item), 0);
-      const avgInfluence = stageData.length > 0 ? totalInfluence / stageData.length : 0;
-      
+      const totalInfluence = stageData.reduce((sum, item) => {
+        return sum + (item.reposts || item.shares || 0) * 3 + (item.comments || 0) * 2 + (item.likes || 0);
+      }, 0);
+
       stages.push({
-        name: stageNames[i],
-        label: stageLabels[i],
+        label: ['early', 'developing', 'peak', 'declining'][i],
+        name: ['萌芽期', '发酵期', '爆发期', '平稳期'][i],
         postCount: stageData.length,
         timeRange: {
           start: stageData[0]?.createdAt,
           end: stageData[stageData.length - 1]?.createdAt
         },
         totalInfluence,
-        avgInfluence,
-        intensity: this.classifyStageIntensity(avgInfluence)
+        avgInfluence: stageData.length > 0 ? totalInfluence / stageData.length : 0,
+        sampleContents: stageData.slice(0, 5).map(item => (item.content || '').substring(0, 100))
       });
     }
 
-    return stages;
+    const prompt = `你是一个专业的传播阶段分析专家。请分析以下四个传播阶段的特征。
+
+阶段数据：
+${JSON.stringify(stages, null, 2)}
+
+请输出JSON格式结果：
+{
+  "stages": [
+    {
+      "name": "阶段名称",
+      "label": "标签",
+      "postCount": 帖子数,
+      "timeRange": { "start": "开始时间", "end": "结束时间" },
+      "totalInfluence": 总影响力,
+      "avgInfluence": 平均影响力,
+      "intensity": "high/medium/low",
+      "description": "阶段特征描述",
+      "keyCharacteristics": ["特征1", "特征2"]
+    }
+  ],
+  "overallTrend": "整体传播趋势描述"
+}
+
+阶段强度判断：
+- high: avgInfluence > 1000
+- medium: avgInfluence > 500
+- low: avgInfluence <= 500`;
+
+    try {
+      const response = await this.llmClient.chat(prompt, {
+        temperature: 0.3,
+        maxTokens: 2000
+      });
+
+      const result = this.parseLLMResponse(response.content);
+      return result.stages || stages;
+    } catch (error) {
+      logger.error('[V2] LLM传播阶段分析失败:', error);
+      return stages;
+    }
   }
 
   /**
-   * 分类阶段强度
+   * 使用LLM识别传播助推因素
    */
-  classifyStageIntensity(avgInfluence) {
-    if (avgInfluence > 1000) return 'high';
-    if (avgInfluence > 500) return 'medium';
-    return 'low';
+  async identifyBoostingFactorsWithLLM(data) {
+    const dataSummary = data.map((item, idx) => ({
+      index: idx,
+      content: (item.content || item.text || '').substring(0, 150),
+      reposts: item.reposts || item.repostCount || item.shares || 0,
+      comments: item.comments || item.commentCount || 0,
+      likes: item.likes || item.likeCount || 0
+    })).slice(0, 20);
+
+    const prompt = `你是一个专业的传播助推因素分析专家。请分析以下数据的传播助推因素。
+
+数据：
+${JSON.stringify(dataSummary, null, 2)}
+
+请输出JSON格式结果：
+{
+  "factors": [
+    {
+      "type": "因素类型(hashtag/high_engagement_content/time_cluster/kol_participation)",
+      "description": "因素描述",
+      "details": [
+        { "name": "名称", "count": 数量, "impact": "影响描述" }
+      ],
+      "impact": "high/medium/low"
+    }
+  ],
+  "primaryDriver": "主要传播驱动力描述"
+}
+
+助推因素类型：
+1. hashtag: 热门话题标签
+2. high_engagement_content: 高互动内容
+3. time_cluster: 时间集中爆发
+4. kol_participation: KOL参与`;
+
+    try {
+      const response = await this.llmClient.chat(prompt, {
+        temperature: 0.3,
+        maxTokens: 2000
+      });
+
+      const result = this.parseLLMResponse(response.content);
+      return result.factors || [];
+    } catch (error) {
+      logger.error('[V2] LLM助推因素分析失败:', error);
+      return [];
+    }
   }
 
   /**
-   * 分析传播速度和范围
+   * 计算传播指标
    */
-  analyzePropagationMetrics(data) {
+  calculatePropagationMetrics(data) {
     if (data.length === 0) {
       return {
         speed: 0,
+        duration: 0,
         range: 0,
         coverage: 'minimal',
         interactionMetrics: {}
@@ -298,21 +393,25 @@ class PropagationAgent extends BaseAgentV2 {
       return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
     });
 
-    // 时间范围
     const startTime = new Date(sortedData[0].createdAt || 0);
     const endTime = new Date(sortedData[sortedData.length - 1].createdAt || 0);
-    const duration = (endTime - startTime) / (1000 * 60 * 60); // 小时
+    const duration = (endTime - startTime) / (1000 * 60 * 60);
 
-    // 传播速度（每小时帖子数）
     const speed = duration > 0 ? data.length / duration : data.length;
 
-    // 总互动数据
-    const totalReposts = data.reduce((sum, item) => sum + (item.reposts || item.repostCount || 0), 0);
+    const totalReposts = data.reduce((sum, item) => sum + (item.reposts || item.repostCount || item.shares || 0), 0);
     const totalComments = data.reduce((sum, item) => sum + (item.comments || item.commentCount || 0), 0);
     const totalLikes = data.reduce((sum, item) => sum + (item.likes || item.likeCount || 0), 0);
     const totalInteractions = totalReposts + totalComments + totalLikes;
+    
+    logger.debug('[V2] 传播指标计算:', {
+      dataCount: data.length,
+      totalReposts,
+      totalComments,
+      totalLikes,
+      totalInteractions
+    });
 
-    // 覆盖范围评估
     const uniqueUsers = new Set(data.map(item => item.userId || item.author)).size;
     let coverage = 'minimal';
     if (uniqueUsers > 1000) coverage = 'wide';
@@ -335,108 +434,64 @@ class PropagationAgent extends BaseAgentV2 {
   }
 
   /**
-   * 识别传播助推因素
+   * 解析LLM响应
    */
-  identifyBoostingFactors(data) {
-    const factors = [];
-
-    // 分析话题标签
-    const hashtagPattern = /#([^#]+)#/g;
-    const hashtags = new Map();
-    
-    data.forEach(item => {
-      const content = item.content || '';
-      let match;
-      while ((match = hashtagPattern.exec(content)) !== null) {
-        const tag = match[1];
-        hashtags.set(tag, (hashtags.get(tag) || 0) + 1);
+  parseLLMResponse(response) {
+    try {
+      return JSON.parse(response);
+    } catch (e) {
+      const codeBlockMatch = response.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (codeBlockMatch) {
+        return JSON.parse(codeBlockMatch[1]);
       }
-    });
-
-    // 找出热门话题标签
-    const topHashtags = Array.from(hashtags.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5);
-
-    if (topHashtags.length > 0) {
-      factors.push({
-        type: 'hashtag',
-        description: '热门话题标签助推',
-        details: topHashtags.map(([tag, count]) => ({ tag, count }))
-      });
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
+      }
+      throw new Error('无法解析LLM响应');
     }
-
-    // 分析关键评论
-    const highEngagementPosts = data
-      .filter(item => this.calculateInfluence(item) > this.influenceThresholds.medium)
-      .slice(0, 5);
-
-    if (highEngagementPosts.length > 0) {
-      factors.push({
-        type: 'high_engagement_content',
-        description: '高互动内容助推',
-        details: highEngagementPosts.map(post => ({
-          content: (post.content || '').substring(0, 100),
-          influence: this.calculateInfluence(post)
-        }))
-      });
-    }
-
-    // 分析时间节点
-    const timeClusters = this.analyzeTimeClusters(data);
-    if (timeClusters.length > 0) {
-      factors.push({
-        type: 'time_cluster',
-        description: '时间集中爆发',
-        details: timeClusters
-      });
-    }
-
-    return factors;
   }
 
   /**
-   * 分析时间聚集
+   * 获取默认关键节点结果
    */
-  analyzeTimeClusters(data) {
-    const clusters = [];
-    const hourCounts = new Map();
+  getDefaultKeyNodesResult(data) {
+    const uniqueUsers = new Set(data.map(item => item.userId || item.author)).size;
+    return {
+      summary: {
+        totalNodes: uniqueUsers,
+        originatorCount: 0,
+        opinionLeaderCount: 0,
+        mediaCount: 0,
+        spreaderCount: 0
+      },
+      originators: [],
+      opinionLeaders: [],
+      mediaAccounts: [],
+      spreaders: []
+    };
+  }
 
-    data.forEach(item => {
-      const hour = new Date(item.createdAt || 0).getHours();
-      hourCounts.set(hour, (hourCounts.get(hour) || 0) + 1);
-    });
-
-    // 找出发帖高峰时段
-    const sortedHours = Array.from(hourCounts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 3);
-
-    sortedHours.forEach(([hour, count]) => {
-      if (count > data.length * 0.1) { // 超过10%的帖子
-        clusters.push({
-          hour,
-          count,
-          percentage: ((count / data.length) * 100).toFixed(1)
-        });
-      }
-    });
-
-    return clusters;
+  /**
+   * 获取默认传播路径结果
+   */
+  getDefaultPropagationPathsResult() {
+    return {
+      stages: [],
+      mainPaths: [],
+      pathCount: 0
+    };
   }
 
   /**
    * 计算置信度
    */
   calculateConfidence(keyNodes, propagationMetrics) {
-    let score = 0.6; // 基础分
+    let score = 0.6;
 
-    // 根据节点丰富度加分
     if (keyNodes.summary.totalNodes > 10) score += 0.1;
-    if (keyNodes.opinionLeaders.length > 0) score += 0.1;
-    if (keyNodes.mediaAccounts.length > 0) score += 0.1;
-
-    // 根据传播数据完整性加分
+    if (keyNodes.opinionLeaders?.length > 0) score += 0.1;
+    if (keyNodes.mediaAccounts?.length > 0) score += 0.1;
     if (propagationMetrics.interactionMetrics.totalInteractions > 0) score += 0.1;
 
     return Math.min(1, score);
@@ -448,26 +503,21 @@ class PropagationAgent extends BaseAgentV2 {
   generateInsights(keyNodes, propagationMetrics, boostingFactors) {
     const insights = [];
 
-    // 传播规模洞察
     insights.push(`传播涉及${keyNodes.summary.totalNodes}个账号，覆盖范围${propagationMetrics.coverage === 'wide' ? '广泛' : '有限'}`);
 
-    // 关键节点洞察
-    if (keyNodes.opinionLeaders.length > 0) {
+    if (keyNodes.opinionLeaders?.length > 0) {
       insights.push(`识别到${keyNodes.opinionLeaders.length}个意见领袖参与传播`);
     }
-    if (keyNodes.mediaAccounts.length > 0) {
+    if (keyNodes.mediaAccounts?.length > 0) {
       insights.push(`${keyNodes.mediaAccounts.length}个媒体账号介入，传播进入公共视野`);
     }
 
-    // 传播速度洞察
     insights.push(`传播速度为${propagationMetrics.speed}帖/小时，总互动量${propagationMetrics.interactionMetrics.totalInteractions}`);
 
-    // 助推因素洞察
-    boostingFactors.forEach(factor => {
-      if (factor.type === 'hashtag' && factor.details.length > 0) {
-        insights.push(`话题标签#${factor.details[0].tag}#助推传播，出现${factor.details[0].count}次`);
-      }
-    });
+    if (boostingFactors.length > 0) {
+      const primaryFactor = boostingFactors[0];
+      insights.push(`主要传播助推因素: ${primaryFactor.description}`);
+    }
 
     return insights;
   }
@@ -478,23 +528,19 @@ class PropagationAgent extends BaseAgentV2 {
   generateRecommendations(propagationMetrics, boostingFactors) {
     const recommendations = [];
 
-    // 基于传播速度的建议
     if (parseFloat(propagationMetrics.speed) > 10) {
       recommendations.push('传播速度较快，建议密切关注舆情走向，及时回应');
     }
 
-    // 基于覆盖范围的建议
     if (propagationMetrics.coverage === 'wide') {
       recommendations.push('传播范围广泛，需准备全面的舆情应对方案');
     }
 
-    // 基于助推因素的建议
     const hashtagFactor = boostingFactors.find(f => f.type === 'hashtag');
     if (hashtagFactor) {
-      recommendations.push(`关注话题标签传播动态，可考虑引导话题走向`);
+      recommendations.push('关注话题标签传播动态，可考虑引导话题走向');
     }
 
-    // 基于互动数据的建议
     const interactions = propagationMetrics.interactionMetrics;
     if (interactions.totalReposts > interactions.totalComments * 2) {
       recommendations.push('转发量远高于评论量，存在情绪化传播风险');
