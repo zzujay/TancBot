@@ -35,7 +35,7 @@ class EventNarrativeAgent extends BaseAgentV2 {
       
       // 2. 使用LLM进行智能整合
       logger.info('[V2] 事件经过整合智能体调用LLM进行整合');
-      const llmResult = await this.integrateWithLLM(
+      let llmResult = await this.integrateWithLLM(
         data,
         factDraft,
         emotionDetails,
@@ -43,12 +43,37 @@ class EventNarrativeAgent extends BaseAgentV2 {
       );
       
       // 3. 从LLM结果构建结构化事件经过
-      const structuredNarrative = this.buildNarrativeFromLLM(llmResult);
+      let structuredNarrative = this.buildNarrativeFromLLM(llmResult);
       
-      // 4. 校验完整性
+      // 4. 检查时间矛盾，如果有则使用LLM重新分析
+      if (structuredNarrative.timelineValidation?.hasTimeAnomaly) {
+        logger.warn('[V2] 检测到时间矛盾，使用LLM重新分析因果关系');
+        
+        // 准备更详细的原始数据给LLM重新分析
+        const enrichedData = this.prepareEnrichedData(data, structuredNarrative);
+        
+        // 使用LLM重新分析，明确指定按因果逻辑排序
+        const correctedResult = await this.reanalyzeWithCausalLogic(
+          enrichedData,
+          factDraft,
+          emotionDetails,
+          propagationDetails,
+          structuredNarrative.timelineValidation
+        );
+        
+        // 使用修正后的结果
+        if (correctedResult && correctedResult.development && correctedResult.development.length > 0) {
+          llmResult = correctedResult;
+          structuredNarrative = this.buildNarrativeFromLLM(llmResult);
+          structuredNarrative.wasReanalyzed = true;
+          structuredNarrative.reanalysisReason = '时间矛盾已修正';
+        }
+      }
+      
+      // 5. 校验完整性
       const completeness = this.validateCompleteness(structuredNarrative);
       
-      // 5. 计算置信度
+      // 6. 计算置信度
       const confidence = this.calculateConfidence(completeness, llmResult);
       this.setConfidence(confidence);
 
@@ -861,6 +886,119 @@ ${propagationText}
     }
 
     return recommendations;
+  }
+
+  /**
+   * 准备增强数据用于重新分析
+   * 当检测到时间矛盾时，准备更详细的原始数据
+   */
+  prepareEnrichedData(rawData, narrative) {
+    // 提取所有时间信息
+    const timeInfo = rawData.map((item, index) => ({
+      index,
+      content: (item.content || item.text || '').substring(0, 200),
+      author: item.author || item.userId || '匿名',
+      publishTime: item.publish_time || item.publishTime || item.createdAt || '未知',
+      shares: item.shares || 0,
+      comments: item.comments || 0,
+      likes: item.likes || 0
+    }));
+
+    // 提取当前检测到的时间矛盾
+    const contradictions = narrative.timelineValidation?.issues || [];
+
+    return {
+      rawPosts: timeInfo,
+      contradictions: contradictions,
+      currentDevelopment: narrative.development?.map(d => ({
+        time: d.time,
+        event: d.event,
+        description: d.description
+      })) || []
+    };
+  }
+
+  /**
+   * 使用LLM重新分析，按因果逻辑排序
+   * 当检测到时间矛盾时，通过LLM智能识别因果关系并重新排序
+   */
+  async reanalyzeWithCausalLogic(enrichedData, factDraft, emotionDetails, propagationDetails, timelineValidation) {
+    logger.info('[V2] 使用LLM按因果逻辑重新分析事件经过');
+
+    const prompt = `你是一个专业的事件因果分析专家。当前数据中存在时间逻辑矛盾，需要你基于事件内容智能识别因果关系，并按因果逻辑重新排序。
+
+**核心任务：**
+1. 分析所有事件内容，识别真正的因果关系（起因→发展→结果）
+2. 忽略原始时间标记中的错误，以因果逻辑为准
+3. 为每个事件推断合理的时间顺序
+4. 输出按因果逻辑排序的事件发展过程
+
+**输入数据：**
+原始微博数据：
+${JSON.stringify(enrichedData.rawPosts, null, 2)}
+
+当前检测到的时间矛盾：
+${JSON.stringify(enrichedData.contradictions, null, 2)}
+
+当前的事件排序（存在问题的）：
+${JSON.stringify(enrichedData.currentDevelopment, null, 2)}
+
+**分析要求：**
+1. 识别哪个事件是"起因"（如：摔倒、事故、首次曝光等）
+2. 识别后续发展事件（如：帮扶、判责、索赔、开庭等）
+3. 识别最终结果（如：撤诉、和解、判决等）
+4. 按因果逻辑为每个事件分配合理的时间顺序
+5. 如果时间标记明显错误，修正时间标记
+
+**输出格式（JSON）：**
+{
+  "development": [
+    {
+      "sequence": 1,
+      "time": "修正后的时间（格式：YYYY-MM-DD）",
+      "originalTime": "原始时间标记",
+      "event": "事件内容",
+      "description": "详细描述",
+      "causalRole": "起因/发展/结果",
+      "reasoning": "为什么这样排序的理由"
+    }
+  ],
+  "timeCorrections": [
+    {
+      "original": "原始时间",
+      "corrected": "修正后的时间",
+      "reason": "修正理由"
+    }
+  ],
+  "causalChain": "因果链描述（如：摔倒→帮扶→判责→索赔→撤诉）"
+}
+
+**重要提示：**
+- 优先考虑因果关系，而非原始时间标记
+- 如果原始时间明显错误（如结果在起因之前），必须修正
+- 为每个事件提供修正理由
+- 确保排序后的逻辑通顺：起因→发展→结果`;
+
+    try {
+      const response = await llmClient.chat(prompt, {
+        temperature: 0.3,
+        maxTokens: 3000
+      });
+
+      const result = this.parseLLMResponse(response.content);
+      
+      // 验证返回结果
+      if (result.development && result.development.length > 0) {
+        logger.info(`[V2] LLM重新分析完成，生成${result.development.length}个事件节点`);
+        return result;
+      } else {
+        logger.warn('[V2] LLM重新分析返回空结果，使用原始结果');
+        return null;
+      }
+    } catch (error) {
+      logger.error('[V2] LLM因果逻辑重新分析失败:', error);
+      return null;
+    }
   }
 
   /**

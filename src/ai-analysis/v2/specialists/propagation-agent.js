@@ -154,12 +154,18 @@ ${JSON.stringify(dataSummary, null, 2)}
 }
 
 节点识别标准：
-1. originators: 最早发布相关内容的账号
-2. opinionLeaders: 粉丝>10万或影响力>1万的账号
-3. mediaAccounts: 名称包含媒体关键词的账号
-4. spreaders: 有一定影响力但非意见领袖的账号
+1. originators: 最早发布相关内容的账号（时间最早的1-2个账号）
+2. opinionLeaders: 符合以下任一条件的账号：
+   - 粉丝数>10万（如果数据中有粉丝数）
+   - 总影响力>1万（影响力=转发*3+评论*2+点赞）
+   - 单帖平均互动>1000
+   - 发帖数>3且总互动量排名前20%
+3. mediaAccounts: 名称包含以下关键词的账号：新闻、媒体、报、网、TV、Radio、Press、Media、News、财经、科技、娱乐、体育、教育、健康
+4. spreaders: 有一定影响力但不符合意见领袖标准的账号
 
-影响力计算：转发*3 + 评论*2 + 点赞*1`;
+影响力计算：转发*3 + 评论*2 + 点赞*1
+
+注意：如果followerCount为0或缺失，请主要依据互动数据（转发、评论、点赞）和发帖数量来判断意见领袖。高互动量和高发帖频率的账号也可能是意见领袖。`;
 
     try {
       const response = await this.llmClient.chat(prompt, {
